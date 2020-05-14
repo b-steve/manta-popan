@@ -127,7 +127,7 @@ if(F){
                           ),
                           ## start from the generating values: this named vector can be entered in any order
                           startvec=c(Ns.1=1000, Ns.2=1200, b1.1=0.18, b2.1=0.1, phi1.1=0.8, phi7.1=0.4,
-                                     phi1.2=0.9, phi7.2=0.5, p1.1=0.3, p1.2=0.2))
+                                     phi1.2=0.9, phi7.2=0.5, p1.1=0.3, p1.2=0.2), printit = TRUE)
 
 
 
@@ -173,7 +173,6 @@ pentGeneral.func <- function(rhovec, phivec, k){
     ## So pent[2:k] = rho[1:k-1]*cumprod(c(1, (phi+rho)[1:k-2])) * pent1.
     ##
     ## For the POPAN-lambda model, set phi and rho as constants: then pent[t+1]=rho*(phi+rho)^(t-1)*pent1.
-
     pentvec <- c(1, rhovec*cumprod(c(1, (phivec+rhovec)[1:(k-2)])))
     pentvec / sum(pentvec)
 }
@@ -855,6 +854,7 @@ popanGeneral.fit.func <- function(dat, k=ncol(dat[[1]]), birthfunc = immigration
     ## All parameters except for Ns's have lower limit of 0 (set to 1e-6 to keep out of trouble at the boundaries):
     npar <- length(parsEstvec)
     lowervec <- rep(1e-6, npar)
+    lowervec[grep("b", parsEstvec)] <- -Inf
     ## For the Ns parameters, insert lower limit which is the maximum of nhist for all the groups that
     ## possess that parameter.  For example if Ns.1=Ns.2 in the model, then the constraint for Ns.1
     ## is that it must be greater than both nhistList[[1]] and nhistList[[2]].
