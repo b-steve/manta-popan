@@ -72,7 +72,7 @@ if(F){
     ## For example, use the simple function immigrationElNino.func to establish higher per-capita "birth" rates in
     ## two years, specifically 2014 and 2015, which respectively apply to immigrants arriving in 2015 and 2016.
     ## The code is set up so that any function can be used here, as long as it takes a vector of parameters
-    ## as inputs and returns a vector of overall per-capita birthrates of length k-1.
+    ## as inputs and returns a vector of ovearall per-capita birthrates of length k-1.
 
     ## Note that POPAN-General allows for different survival probabilities by year, as well as allowing
     ## birth/immigration to be established by a generic covariate-based function.
@@ -873,14 +873,14 @@ popanGeneral.fit.func <- function(dat, k=ncol(dat[[1]]), birthfunc = immigration
     ## -----------------------------------------------------------------------------------------------------
     ## Negative log likelihood function:
     ## -----------------------------------------------------------------------------------------------------
-    negloglik.func <- function(pars) {
+    negloglik.func <- function(pars, out = "nll") {
         ## pars contains only the parameters for estimation.
         ## Populate the vector of all parameters by mapping pars to allpars as follows:
         allpars <- pars[parInds]
         names(allpars) <- allparnames
 
         ## Inner function to find the neg-log-likelihood contribution for a single group.
-        onegroup.func <- function(gp){
+        onegroup.func <- function(gp, out){
             ## Unpack the parameters for this group:
             Ns <- allpars[paste0("Ns.", gp)]
             bpars <- allpars[paste0("b", 1:nbpar, ".", gp)]  ## nbpars of these
@@ -892,7 +892,6 @@ popanGeneral.fit.func <- function(dat, k=ncol(dat[[1]]), birthfunc = immigration
 
             ## Find entry proportions from the POPAN-general function:
             pentvec <- pentGeneral.func(rhovec, phivec, k)
-
             ## Find psi, chi, and ptheta for this group:
             psivec <- psi.func(pentvec, phivec, pvec, k)
             chivec <- chi.func(phivec, pvec, k)
@@ -903,7 +902,7 @@ popanGeneral.fit.func <- function(dat, k=ncol(dat[[1]]), birthfunc = immigration
             nhist <- nhistList[[gp]]
 
             ## Return the negative log-likelihood contribution for this group:
-            -sum(
+            nll <- -sum(
                  ## Binomial coefficients
                  ## Could use lchoose(Ns, nhist) instead of the next three lines; it gives slightly different answers
                  ## (<=1% difference in parameter estimates over the course of the optimization) though
@@ -918,30 +917,73 @@ popanGeneral.fit.func <- function(dat, k=ncol(dat[[1]]), birthfunc = immigration
                  popsum$non.caps * log(1 - pvec),
                  popsum$survives[-k] * log(phivec),
                  popsum$last.tab * log(chivec))
+            out <- get(out)
+            out
         }
         ## Overall negative-log-likelihood is the sum across groups:
-        nll <- sum(sapply(1:ngp, onegroup.func))
+        nll <- sum(sapply(1:ngp, onegroup.func, out = out))
         if(printit){
             for (i in 1:length(pars)){
                 cat(names(pars)[i], ": ", round(pars[i], 3), ", ", sep = "")
             }
             cat("NLL:", nll, "\n")
         }
-        return(nll)
+        if (out == "nll"){
+            out <- nll
+        } else {
+            out <- sapply(1:ngp, onegroup.func, out = out)
+        }
+        out
     }
 
 
     ## --------------------------------------------------------------------------------------------------
     ## Fit popan model and return:
     ## -----------------------------------------------------------------------------------------------------
-    nlminb(
+    fit <- nlminb(
         start = startvec,
         objective = negloglik.func,
         lower = lowervec,
         upper = uppervec,
         control=list(iter.max=1000, eval.max=5000))
+    pents <- negloglik.func(pars = fit$par, out = "pentvec")
+    rownames(pents) <- NULL
+    phis <- negloglik.func(pars = fit$par, out = "phivec")
+    rhos <- negloglik.func(pars = fit$par, out = "rhovec")
+    ps <- negloglik.func(pars = fit$par, out = "pvec")
+    Ns <- negloglik.func(pars = fit$par, out = "Ns")
+    ENs <- matrix(0, nrow = k, ncol = ngp)
+    ENs[1, ] <- Ns*pents[1, ]
+    for (i in 2:k){
+        ENs[i, ] <- phis[i - 1, ]*ENs[i - 1] + Ns*pents[i, ]
+    }
+    out <- list(fit = fit, Ns = Ns, phis = phis, rhos = rhos, ps = ps, pents = pents, ENs = ENs)
+    class(out) <- "popan"
+    out
+}
 
+plot.popan <- function(object, ...){
+    plot.new()
+    ENs <- object$ENs
+    k <- nrow(ENs)
+    ngp <- ncol(ENs)
+    plot.window(xlim = c(1, k), ylim = c(0, max(ENs)))
+    box()
+    axis(1)
+    axis(2)
+    for (i in 1:ngp){
+        lines(1:k, ENs[, i], lty = i)
+        points(1:k, ENs[, i], pch = i)
+    }
+}
 
+AIC.popan <- function(object, ...){
+    ## Log-likleihood.
+    ll <- -object$fit$objective
+    ## Number of paramters.
+    k <- length(object$fit$par)
+    ## AIC.
+    -2*ll + 2*k
 }
 
 ##############################################################
@@ -982,3 +1024,5 @@ popanGeneral.wrap <- function(Nsim=100, k=11,  # k=number of capture occasions
 }
 
 ##############################################################
+
+
