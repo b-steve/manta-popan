@@ -963,17 +963,21 @@ popanGeneral.fit.func <- function(dat, k=ncol(dat[[1]]), birthfunc = immigration
 }
 
 plot.popan <- function(object, ...){
-    plot.new()
-    ENs <- object$ENs
-    k <- nrow(ENs)
-    ngp <- ncol(ENs)
-    plot.window(xlim = c(1, k), ylim = c(0, max(ENs)))
-    box()
-    axis(1)
-    axis(2)
-    for (i in 1:ngp){
-        lines(1:k, ENs[, i], lty = i)
-        points(1:k, ENs[, i], pch = i)
+    par(mfrow = c(3, 2))
+    for (i in 3:7){
+        plot.new()
+        ys <- object[[i]]
+        k <- nrow(ys)
+        ngp <- ncol(ys)
+        plot.window(xlim = c(1, k), ylim = c(0, max(ys)))
+        box()
+        axis(1)
+        axis(2)
+        for (j in 1:ngp){
+            lines(1:k, ys[, j], lty = j)
+            points(1:k, ys[, j], pch = j)
+        }
+        title(main = names(object)[i])
     }
 }
 
