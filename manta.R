@@ -1,4 +1,5 @@
 library(mgcv)
+library(parallel)
 ## Sourcing model fitting functions.
 source("Rfunc.R")
 source("full-covs.R")
@@ -6,30 +7,83 @@ source("full-covs.R")
 load("manta.RData")
 
 
-## Last year's mei dictates this year's pent.
-birth.elnino.mei.lag <- function(bpars = c(b1 = 0, b2 = 0)){
-    b1 <- bpars[1]
-    b2 <- bpars[2]
-    eta <- b1 + b2*covs$mei[-length(covs$mei)]
-    exp(eta)
-}
+covs$unlag.mei <- c(covs$mei[-1], 0)
 
-## This year's mei dictates this year's pent.
-birth.elnino.mei <- function(bpars = c(b1 = 0, b2 = 0)){
-    b1 <- bpars[1]
-    b2 <- bpars[2]
-    eta <- b1 + b2*covs$mei[-1]
-    exp(eta)
-}
-birth.full <- function(bpars = rep(0, 10)){
-    exp(bpars)
-}
+covs$en.factor <- c(rep("No", 5), rep("Yes", 2), rep("No", 4))
 
-df <- data.frame(en = c(rep("A", 6), rep("B", 2), rep("A", 3)))
-## A model with fit.popan.
-fit <- fit.popan(captlist[1:2], model.list = list(b = ~ en, phi = ~ en, p = ~ occasion),
-                 group.pars = list(b = TRUE, phi = FALSE, p = FALSE),
-                 df = cbind(df, covs), printit = TRUE)
+## ## A model with fit.popan.
+## fit.full <- fit.popan(captlist[1:2], model.list = list(b = ~ occasion,
+##                                                        phi = ~ occasion,
+##                                                        p = ~ occasion),
+##                       group.pars = list(b = FALSE, phi = FALSE, p = FALSE),
+##                       df = cbind(df, covs), printit = FALSE)
+
+## Trying out par.fit.popan.
+args <- list(
+    ## Full, complicated model. Different parameters for the sexes.
+    list(captlist[1:2], model.list = list(b = ~ occasion,
+                                          phi = ~ occasion,
+                                          p = ~ occasion),
+         group.pars = list(b = FALSE, phi = FALSE, p = FALSE),
+         df = covs),
+    ## Full, complicated model with same parameters for the
+    ## sexes. Similar to Edy's popan-full model.
+    list(captlist[1:2], model.list = list(b = ~ occasion,
+                                          phi = ~ occasion,
+                                          p = ~ occasion),
+         group.pars = list(b = TRUE, phi = TRUE, p = TRUE),
+         df = covs),
+    ## Similar to Edy's single-phi model.
+    list(captlist[1:2], model.list = list(b = ~ occasion,
+                                          phi = ~ 1,
+                                          p = ~ occasion),
+         group.pars = list(b = TRUE, phi = TRUE, p = TRUE),
+         df = covs),
+    ## Edy's single-phi, but with probability of capture modelled with
+    ## survey effort.
+    list(caplist = captlist[1:2], model.list = list(b = ~ occasion,
+                                                    phi = ~ 1,
+                                                    p = ~ survey.eff),
+         group.pars = list(b = TRUE, phi = TRUE, p = TRUE),
+         df = covs),
+    ## Similar to above, but also allowing survey effort to vary in time.
+    list(caplist = captlist[1:2], model.list = list(b = ~ occasion,
+                                                    phi = ~ 1,
+                                                    p = ~ survey.eff + year),
+         group.pars = list(b = TRUE, phi = TRUE, p = TRUE),
+         df = covs),
+    ## Similar to above, but allowing rho to change with unlag.mei.
+    list(caplist = captlist[1:2], model.list = list(b = ~ mei,
+                                                    phi = ~ mei,
+                                                    p = ~ survey.eff),
+         group.pars = list(b = FALSE, phi = FALSE, p = FALSE),
+         df = covs),
+    ## Similar to above, but allowing rho to change with unlag.mei.
+    list(caplist = captlist[1:2], model.list = list(b = ~ lag.mei,
+                                                    phi = ~ mei,
+                                                    p = ~ survey.eff),
+         group.pars = list(b = FALSE, phi = FALSE, p = FALSE),
+         df = covs),
+    ## Similar to above, but allowing rho to change with unlag.mei.
+    list(caplist = captlist[1:2], model.list = list(b = ~ unlag.mei,
+                                                    phi = ~ mei,
+                                                    p = ~ survey.eff),
+         group.pars = list(b = FALSE, phi = FALSE, p = FALSE),
+         df = covs),
+    ## Similar to above, but allowing rho to change with unlag.mei.
+    list(caplist = captlist[1:2], model.list = list(b = ~ s(time, k = 6),
+                                                    phi = ~ s(time, k = 6),
+                                                    p = ~ s(time, k = 6)),
+         group.pars = list(b = TRUE, phi = TRUE, p = TRUE),
+         df = covs)
+    )
+
+
+fits <- par.fit.popan(3, arg.list = args)
+
+plot(fits[[9]])
+
+plot(covs$unlag.mei)
 
 ## A model.
 a.model <- popanGeneral.fit.func(captlist[1:2], k=11, birthfunc = immigrationElNino.func,
