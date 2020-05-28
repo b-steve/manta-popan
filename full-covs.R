@@ -245,7 +245,7 @@ cov.func <- function(formula, df, invlink = identity){
 
 fit.popan <- function(caplist, model.list = NULL, group.pars = NULL, df = NULL, printit = FALSE){
     ## If caplist is a matrix, turn it into a list for consistency.
-    if (!is.list(captlist)){
+    if (!is.list(caplist)){
         caplist <- list(caplist)
     }
     ## Number of different groups.
@@ -352,4 +352,23 @@ fit.popan <- function(caplist, model.list = NULL, group.pars = NULL, df = NULL, 
     ## Fitting the model.
     popanGeneral.covs.fit.func(caplist, k = k, birthfunc = b.func, phifunc = phi.func, pfunc = p.func,
                                model = model, startvec = startvec, printit = printit)
+}
+
+par.fit.popan <- function(n.cores, ..., arg.list = NULL){
+    if (is.null(arg.list)){
+        arg.list <- list(...)
+    }
+    n.fits <- length(arg.list)
+    FUN <- function(i, arg.list){
+        out <- try(do.call(fit.popan, arg.list[[i]]), silent = TRUE)
+    }
+    cluster <- makeCluster(n.cores)
+    clusterEvalQ(cluster, {
+        library(mgcv)
+        source("Rfunc.R")
+        source("full-covs.R") 
+    })
+    out <- parLapplyLB(cluster, 1:n.fits, FUN, arg.list = arg.list)
+    stopCluster(cluster)
+    out
 }
