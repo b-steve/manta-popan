@@ -211,7 +211,7 @@ popanGeneral.covs.fit.func <- function(dat, k=ncol(dat[[1]]), birthfunc = immigr
     ENs <- matrix(0, nrow = k, ncol = ngp)
     ENs[1, ] <- Ns*pents[1, ]
     for (i in 2:k){
-        ENs[i, ] <- phis[i - 1, ]*ENs[i - 1] + Ns*pents[i, ]
+        ENs[i, ] <- phis[i - 1, ]*ENs[i - 1, ] + Ns*pents[i, ]
     }
     out <- list(fit = fit, Ns = Ns, phis = phis, rhos = rhos, ps = ps, pents = pents, ENs = ENs)
     class(out) <- "popan"

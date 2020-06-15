@@ -955,7 +955,7 @@ popanGeneral.fit.func <- function(dat, k=ncol(dat[[1]]), birthfunc = immigration
     ENs <- matrix(0, nrow = k, ncol = ngp)
     ENs[1, ] <- Ns*pents[1, ]
     for (i in 2:k){
-        ENs[i, ] <- phis[i - 1, ]*ENs[i - 1] + Ns*pents[i, ]
+        ENs[i, ] <- phis[i - 1, ]*ENs[i - 1, ] + Ns*pents[i, ]
     }
     out <- list(fit = fit, Ns = Ns, phis = phis, rhos = rhos, ps = ps, pents = pents, ENs = ENs)
     class(out) <- "popan"
@@ -964,7 +964,7 @@ popanGeneral.fit.func <- function(dat, k=ncol(dat[[1]]), birthfunc = immigration
 
 plot.popan <- function(object, ...){
     par(mfrow = c(3, 2))
-    for (i in 3:7){
+    for (i in 3:6){
         plot.new()
         ys <- object[[i]]
         k <- nrow(ys)
@@ -979,6 +979,20 @@ plot.popan <- function(object, ...){
         }
         title(main = names(object)[i])
     }
+    ## Plot for ENs.
+    plot.new()
+    ys <- object[["ENs"]]
+    ys <- cbind(ys, apply(ys, 1, sum))
+    ngp <- ncol(ys)
+    plot.window(xlim = c(1, k), ylim = c(0, max(ys)))
+    box()
+    axis(1)
+    axis(2)
+    for (j in 1:ngp){
+        lines(1:k, ys[, j], lty = j)
+        points(1:k, ys[, j], pch = j)
+    }
+    title(main = "ENs")
 }
 
 AIC.popan <- function(object, ...){
