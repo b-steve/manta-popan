@@ -218,6 +218,126 @@ popanGeneral.covs.fit.func <- function(dat, k=ncol(dat[[1]]), birthfunc = immigr
     out
 }
 
+## General POPAN simulation function.
+popanGeneral.covs.sim.func <- function(k=11,
+                                       Nsvec=c(1000, 1200),
+                                       phiList=list(rep(0.85, k-1), rep(0.85, k-1)),  ## Can enter as phiList=list(0.85) if const.
+                                       rhoList=list(rep(0.5, k-1), rep(0.5, k-1)),
+                                       pList= list(rep(0.3, k), rep(0.2, k))
+                                       ## If p is just one number for a group, it will be taken as constant for the group.
+                                       ){
+    ## simGroups.popanGeneral.func 13/5/2020
+    ## Simulate from the POPAN-general model for multiple groups (e.g. males and females), in which
+    ## the birth-curve is input through a function birthfunc that can take covariates.
+    ## Currently only birthfunc (replacing rhoList) has been made into a custom-covariate function,
+    ## but phiList and pList could also be replaced by functions if desired.
+    ##
+    ## This function is based on template function simGroups.popanLambda.func. To use this function to
+    ## replicate the POPAN-lambda model, use birthfunc=function(b1) rep(b1, k-1) and
+    ## (say) birthparList=list(0.18, 0.18) : i.e. constant per-capita birth-rate within each group.
+    ##
+    ## Note that the code is set up so that per-capita birth and death rates apply within each group. So for
+    ## example if the groups are males and females, and if they have the same birth-rate of 0.2, then the
+    ## number of males "born" will be 0.2 * (number of current males) each year, and likewise for females.
+    ## See the blurb for immigrationElNino.func to see why this makes sense even if the number of new males
+    ## is completely reliant on the number of females at the previous step, rather than the number of males,
+    ## if we have a population with non-equal sex-ratio.
+    ##
+    ## Additional model blurb below.
+    ##
+    ## k is the number of capture occasions.
+    ##
+    ## Nsvec is a vector giving the superpopulation sizes for different groups.  It is a vector, not a list,
+    ## and must have the same length as the number of groups, with Nsvec[1] being the Ns for group 1,
+    ## Nsvec[2] being the Ns for group 2, etc. The length of Nsvec determines the number of groups (ngp).
+    ## Nsvec is treated differently from the other parameters because it is used to determine ngp.
+    ##
+    ## Each of phi, birthpar, and p can be varied by group. They all come in lists assumed to be ordered
+    ## by group: e.g. phiList[[1]] applies to group 1, phiList[[2]] applies to group 2, etc. Any names given to
+    ## these list components are ignored - i.e. renaming components will not reorder the list.
+    ## If there is only one element in the list, this is assumed to apply to all groups.
+    ## If they are not supplied as a list at all, e.g. pList=c(0.4, 0.5, 0.6), then this will be recast as a list with
+    ## first element c(0.4, 0.5, 0.6).
+
+    ## Determine number of groups from the Ns vector:
+    ngp <- length(Nsvec)
+
+    ## Ensure phiList, birthparList, and pList have the right number of entries, which should be either 1 or
+    ## ngp in each case:
+    if(ngp>1){
+        for(parname in c("phi", "rho", "p")){
+            parListName <- paste0(parname, "List")
+            parList <- eval(parse(text=parListName))
+            ## If parList is not already in list format, recast it as the first element of a list:
+            ## e.g. if pList=c(0.4, 0.5, 0.6) then this will become pList[[1]] = c(0.4, 0.5, 0.6).
+            if(!is.list(parList)) parList <- list(parList)
+            ## If there is only one element in parList, recycle it for all groups:
+            if(length(parList)==1){
+                parListNew <- vector("list", ngp)
+                for(gp in 1:ngp) parListNew[[gp]] <- parList[[1]]
+                assign(x=parListName, value=parListNew)
+            }
+            else if(length(parList)<ngp) stop(paste(parListName, "should be a list of length 1 or ngp."))
+        }
+    }
+
+    ## Within phiList, all elements should have either 1 or k-1 entries: if 1 entry we take phi as constant
+    ## and recycle it to length k-1.
+    phiList <- lapply(phiList, function(x) if(length(x)==1) return(rep(x, k-1)) else return(x))
+    ## Within rhoList, all elements should have either 1 or k-1 entries: if 1 entry we take rho as constant
+    ## and recycle it to length k-1.
+    rhoList <- lapply(rhoList, function(x) if(length(x)==1) return(rep(x, k-1)) else return(x))    
+    ## Within pList, all elements should have either 1 or k entries: if 1 entry take p as constant and recycle it.
+    pList <- lapply(pList, function(x) if(length(x)==1) return(rep(x, k)) else return(x))
+
+    ## -------------------------------------------------------------------------------------------------------------
+    ## Check the lengths of each list element: all phi and rho vectors should have length k-1,
+    ## p vectors should have length k:
+    if(any(lapply(phiList, length)!=k-1)) stop("phiList should have all elements of length k-1")
+    if(any(lapply(rhoList, length)!=k-1)) stop("rhoList should have all elements of length k-1")
+    if(any(lapply(pList, length)!=k)) stop("pList should have all elements of length k")
+    ## Each of phiList, rhoList, and pList are now in the required format of a list with ngp elements.
+
+    ## ----------------------------------------------------------------------------------------------------------------------
+    ## Create capture histories for a single group: this uses phiList[[gp]], rhoList[[gp]], and pList[[gp]]:
+    caphistGroup.func <- function(gp){
+        ## Find pentvec for this group: pentGeneral.func takes a general phivec and rhovec and returns pentvec:
+        pentvec <- pentGeneral.func(rhovec=rhoList[[gp]], phivec=phiList[[gp]], k=k)
+
+        ## Find numbers entered on each occasion:
+        nentered <- cumsum(rmultinom(1, Nsvec[gp], pentvec))
+
+        ## Create matrices and enter first animals
+        alive <- caphists <- matrix(0, nrow=Nsvec[gp], ncol=k)
+        alive[1:nentered[1], 1] <- 1
+
+        ## Enter first captures
+        caphists[1:nentered[1], 1] <- rbinom(nentered[1], 1, pList[[gp]][1])
+
+        ## Loop over remaining occasions
+        for (t in 2:k) {
+            ## Enter survivors from previous occasion: use phivec[t-1] for survival from time t-1 to time t:
+            alive[which(alive[1:nentered[t - 1], t - 1] == 1), t] <-
+                rbinom(sum(alive[1:nentered[t - 1], t - 1]), 1, phiList[[gp]][t-1])
+
+            ## Enter new animals
+            if(nentered[t]>nentered[t-1]) alive[(nentered[t - 1] + 1):nentered[t], t] <- 1
+
+            ## Find captures
+            caphists[which(alive[1:nentered[t], t] == 1), t] <-
+                rbinom(sum(alive[1:nentered[t], t]), 1, pList[[gp]][t])
+        }
+
+        ## Remove unobserved animals
+        caphists <- caphists[rowSums(caphists) > 0, ]
+        return(caphists)
+    }
+    ## ---------------------------------------------------------------------------------------------
+    ## Return list of group capture histories:
+    lapply(1:ngp, caphistGroup.func)
+}
+
+
 ## Function that generates a parameter modelling function (e.g., birthfunc above).
 ## - formula is a standard model formula.
 ## - df is a data frame of covariates.
@@ -243,7 +363,11 @@ cov.func <- function(formula, df, invlink = identity){
          n.par = n.par)
 }
 
+## Function to fit a POPAN model.
 fit.popan <- function(caplist, model.list = NULL, group.pars = NULL, df = NULL, printit = FALSE){
+    ## Saving function arguments.
+    args <- list(caplist = caplist, model.list = model.list,
+                 group.pars = group.pars, df = df, printit = printit)
     ## If caplist is a matrix, turn it into a list for consistency.
     if (!is.list(caplist)){
         caplist <- list(caplist)
@@ -350,8 +474,41 @@ fit.popan <- function(caplist, model.list = NULL, group.pars = NULL, df = NULL, 
     ## Putting together the start values.
     startvec <- c(Ns.startvec, b.startvec, phi.startvec, p.startvec)
     ## Fitting the model.
-    popanGeneral.covs.fit.func(caplist, k = k, birthfunc = b.func, phifunc = phi.func, pfunc = p.func,
-                               model = model, startvec = startvec, printit = printit)
+    out <- popanGeneral.covs.fit.func(caplist, k = k, birthfunc = b.func, phifunc = phi.func,
+                                      pfunc = p.func, model = model, startvec = startvec,
+                                      printit = printit)
+    out$args <- args
+    out
+}
+
+sim.popan <- function(fit){
+    Nsvec <- fit$Ns
+    ngp <- length(Nsvec)
+    phi.mat <- fit$phis
+    rho.mat <- fit$rhos
+    p.mat <- fit$ps
+    k <- nrow(p.mat)
+    phiList <- vector(mode = "list", length = ngp)
+    rhoList <- vector(mode = "list", length = ngp)
+    pList <- vector(mode = "list", length = ngp)
+    for (i in 1:ngp){
+        phiList[[i]] <- phi.mat[, i]
+        rhoList[[i]] <- rho.mat[, i]
+        pList[[i]] <- p.mat[, i]
+    }
+    out <- popanGeneral.covs.sim.func(k, Nsvec, phiList, rhoList, pList)
+}
+
+boot.popan <- function(fit, n.boots = 100){
+    boots <- vector(mode = "list", length = n.boots)
+    args <- fit$args
+    for (i in 1:n.boots){
+        sim.data <- sim.popan(fit)
+        args$caplist <- sim.data
+        boots[[i]] <- do.call(fit.popan, args = args)
+    }
+    fit$boots <- boots
+    fit
 }
 
 par.fit.popan <- function(n.cores, ..., arg.list = NULL){
@@ -370,5 +527,21 @@ par.fit.popan <- function(n.cores, ..., arg.list = NULL){
     })
     out <- parLapplyLB(cluster, 1:n.fits, FUN, arg.list = arg.list)
     stopCluster(cluster)
+    out
+}
+
+summary.popan <- function(boot.fit, par.fun = function(fit) fit$fit$par){
+    ests <- par.fun(boot.fit)
+    boots.par <- sapply(boot.fit$boots, par.fun)
+    ses <- apply(boots.par, 1, sd)
+    lower.ci <- apply(boots.par, 1, quantile, probs = 0.025)
+    upper.ci <- apply(boots.par, 1, quantile, probs = 0.975)
+    out <- matrix(0, nrow = length(ests), ncol = 4)
+    out[, 1] <- ests
+    out[, 2] <- ses
+    out[, 3] <- lower.ci
+    out[, 4] <- upper.ci
+    colnames(out) <- c("Estimate", "Std Error", "Lower CI", "Upper CI")
+    rownames(out) <- names(ests)
     out
 }

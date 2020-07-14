@@ -126,17 +126,23 @@ best.fit <- fit.popan(caplist = captlist[1:2], model.list = list(b = ~ lag.mei,
                       group.pars = list(b = TRUE, phi = FALSE, p = FALSE),
                       df = covs)
 
-
-fits <- par.fit.popan(3, arg.list = args)
-sapply(fits, AIC)
-order(sapply(fits, AIC))
-
-do.call("fit.popan", args[[1]])
-
-plot(fits[[14]])
-
-plot(covs$unlag.mei)
-
+## Carrying out a bootstrap procedure. This will take a while, and
+## computing time will be proportional to n.boots. While you're
+## playing around you can use something like n.boots = 100, but when
+## you do this for realsies it's best to use 1000 or even 10000.
+boot.best.fit <- boot.popan(best.fit, n.boots = 100)
+## Summary for estimated parameters.
+summary.popan(boot.best.fit, function(fit) fit$fit$par)
+## Summary for ENs for first group.
+summary.popan(boot.best.fit, function(fit) fit$ENs[, 1])
+## Plotting ENs for first group, with CIs.
+ENs.summary <- summary.popan(boot.best.fit, function(fit) fit$ENs[, 1])
+## Creating a line for point estimates. The y-axis goes from 0 to the
+## highest upper CI limit.
+plot(ENs.summary[, 1], type = "l", ylim = c(0, max(ENs.summary[, 4])))
+## Adding dotted line for lower and upper CI limits.
+lines(ENs.summary[, 3], lty = "dotted")
+lines(ENs.summary[, 4], lty = "dotted")
 
 ## Comparing population trajectories for everything in fits.
 all.ENs <- sapply(fits, function(x) apply(x$ENs, 1, sum))
