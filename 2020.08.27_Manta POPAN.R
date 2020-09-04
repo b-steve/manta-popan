@@ -3647,7 +3647,7 @@ args <- list(
 best.fit <- fit.popan(caplist = captlist[1:2], model.list = list(b = ~ lag.mei,
                                                                  phi = ~ 1,
                                                                  p = ~ occasion),
-                      group.pars = list(b = TRUE, phi = FALSE, p = FALSE),
+                      group.pars = list(b = FALSE, phi = FALSE, p = FALSE),
                       df = covs)
 AIC(best.fit)
 
@@ -3656,12 +3656,60 @@ AIC(best.fit)
 ## computing time will be proportional to n.boots. While you're
 ## playing around you can use something like n.boots = 100, but when
 ## you do this for realsies it's best to use 1000 or even 10000.
-boot.best.fit <- boot.popan(best.fit, n.boots = 10000)
+boot.best.fit <- boot.popan(best.fit, n.boots = 100)
 ## Summary for estimated parameters.
 summary.popan(boot.best.fit, function(fit) fit$fit$par)
 ## Summary for ENs for first group.
 summary.popan(boot.best.fit, function(fit) fit$ENs[, 1])
-# save boot.best.fit to file
+## Summary for ENs for both groups.
+summary.popan(boot.best.fit, function(fit) fit$ENs[, 1] + fit$ENs[, 2])
+## Summary comparing first and last years:
+summary.popan(boot.best.fit, function(fit) fit$ENs[11, ] - fit$ENs[1, ])
+
+## For p-value comparing first and last year for females:
+## (1) calculate t-test statistic: estimate/std.error:
+358.3438/35.73026
+## (2) compare to a standard normal distribution to get the p-value
+## and multiply by 2 for a two-tailed test:
+2*pnorm(-358.3438/35.73026)
+
+## Comparing males to females in terms of survival.
+summary.popan(boot.best.fit, function(fit) fit$phis[1:2, 1] - fit$phis[1:2, 2])
+2*pnorm(-abs(0.06835144/0.01869571))
+## Restricted fit with male and female survival the same.
+restricted.fit <- fit.popan(caplist = captlist[1:2], model.list = list(b = ~ lag.mei,
+                                                                       phi = ~ 1,
+                                                                       p = ~ occasion),
+                            group.pars = list(b = TRUE, phi = TRUE, p = FALSE),
+                            df = covs)
+## Likelihood ratio test statistics is twice difference in log-likelihoods.
+lrts <- 2*(restricted.fit$fit$objective - best.fit$fit$objective)
+npar.diff <- length(best.fit$fit$par) - length(restricted.fit$fit$par)
+## P-value is calculated by comparing LRTS to a chi-squared distribution with npar.diff degrees of freedom.
+1 - pchisq(lrts, npar.diff)
+
+## Restricted fit with p the same for all years.
+restricted.fit <- fit.popan(caplist = captlist[1:2], model.list = list(b = ~ lag.mei,
+                                                                       phi = ~ 1,
+                                                                       p = ~ 1),
+                            group.pars = list(b = TRUE, phi = FALSE, p = FALSE),
+                            df = covs)
+## Likelihood ratio test statistics is twice difference in log-likelihoods.
+lrts <- 2*(restricted.fit$fit$objective - best.fit$fit$objective)
+npar.diff <- length(best.fit$fit$par) - length(restricted.fit$fit$par)
+## P-value is calculated by comparing LRTS to a chi-squared distribution with npar.diff degrees of freedom.
+1 - pchisq(lrts, npar.diff)
+
+
+## Interpreting b2:
+100*(1 - exp(-0.61394673))
+## For every 1-unit increase in lag-mei, we estimate that the
+## per-capita recruitment rate is multiplied by 0.5412.
+
+## For every 1-unit increase in lag-mei, we estimate that the
+## per-capita recruitment rate decreases by 46%.
+
+## save boot.best.fit to file
 save(boot.best.fit, file = "boot-best-fit-manta.RData")
 
 ## Plotting ENs for first group, with CIs ####
