@@ -364,7 +364,7 @@ cov.func <- function(formula, df, invlink = identity){
 }
 
 ## Function to fit a POPAN model.
-fit.popan <- function(caplist, model.list = NULL, group.pars = NULL, df = NULL, printit = FALSE){
+fit.popan <- function(caplist, model.list = NULL, group.pars = NULL, group.effect = NULL, df = NULL, printit = FALSE){
     ## Saving function arguments.
     args <- list(caplist = caplist, model.list = model.list,
                  group.pars = group.pars, df = df, printit = printit)
@@ -394,6 +394,10 @@ fit.popan <- function(caplist, model.list = NULL, group.pars = NULL, df = NULL, 
     b.func <- b.obj[[1]]
     ## Number of parameters.
     n.b.par <- b.obj[[2]]
+
+    ###
+    #n.b.par <- 2
+    
     ## Setting defaults so Rachel's function knows how many parameters there are.
     formals(b.func)$pars <- rep(0, n.b.par)
     ## Parameter names for the groups.
@@ -406,6 +410,18 @@ fit.popan <- function(caplist, model.list = NULL, group.pars = NULL, df = NULL, 
     for (i in 1:n.groups){
         b.par.names[[i]] <- paste0("b", 1:n.b.par, ".", ifelse(b.group, 1, i))
     }
+    ## Logical value for whether or not to put a group effect on b.
+    b.effect <- group.effect[["b"]]
+    if (is.null(b.effect)){
+        b.effect <- FALSE
+    }
+    ## Put an additive group effect.
+    if (group.effect[["b"]]){
+        n.b.par <- n.b.par + 1
+        b.par.names[[2]][1] <- "b1.2"
+    }
+
+
     ## Start values for b parameters.
     b.startvec <- numeric(sum(sapply(b.par.names, length)))
     names(b.startvec) <- c(b.par.names, recursive = TRUE)
@@ -434,6 +450,16 @@ fit.popan <- function(caplist, model.list = NULL, group.pars = NULL, df = NULL, 
     for (i in 1:n.groups){
         phi.par.names[[i]] <- paste0("phi", 1:n.phi.par, ".", ifelse(phi.group, 1, i))
     }
+    ## Logical value for whether or not to put a group effect on phi.
+    phi.effect <- group.effect[["phi"]]
+    if (is.null(phi.effect)){
+        phi.effect <- FALSE
+    }
+    ## Put an additive group effect.
+    if (phi.effect){
+        n.phi.par <- n.phi.par + 1
+        phi.par.names[[2]][1] <- "phi1.2"
+    }
     ## Start values for phi parameters.
     phi.startvec <- numeric(sum(sapply(phi.par.names, length)))
     names(phi.startvec) <- c(phi.par.names, recursive = TRUE)
@@ -461,6 +487,16 @@ fit.popan <- function(caplist, model.list = NULL, group.pars = NULL, df = NULL, 
     }
     for (i in 1:n.groups){
         p.par.names[[i]] <- paste0("p", 1:n.p.par, ".", ifelse(p.group, 1, i))
+    }
+    ## Logical value for whether or not to put a group effect on p.
+    p.effect <- group.effect[["p"]]
+    if (is.null(p.effect)){
+        p.effect <- FALSE
+    }
+    ## Put an additive group effect.
+    if (group.effect[["p"]]){
+        n.p.par <- n.p.par + 1
+        p.par.names[[2]][1] <- "p1.2"
     }
     ## Start values for p parameters.
     p.startvec <- numeric(sum(sapply(p.par.names, length)))
