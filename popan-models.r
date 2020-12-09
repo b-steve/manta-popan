@@ -85,51 +85,41 @@ for (group.b.i in 1:2){
 
 ## Fitting in 100-model batches.
 n.mods <- length(args)
-all.fits <- vector(mode = "list", length = n.mods)
+fits <- vector(mode = "list", length = n.mods)
 for (i in 1:((n.mods)/100)){
     start <- 100*(i - 1) + 1
     end <- 100*(i - 1) + 100
-    all.fits[start:end] <- par.fit.popan(3, arg.list = args[start:end])
+    fits[start:end] <- par.fit.popan(3, arg.list = args[start:end])
     cat(i, "of", (n.mods)/100, "\n")
 }
-save.image("bleh.RData")
-load("bleh.RData")
-fits <- all.fits
 
-probs <- which(sapply(fits, class) == "try-error")
-
+## list AICs of top-ten models.
 sort(sapply(fits, AIC))[1:10]
 
-## fits all possible models on the list above ####
-#fits <- par.fit.popan(3, arg.list = args)
-#save(fits, file = "2020.10.15_fits.RData")
-#load("2020.10.15_fits.RData")
 
-AIC(fits[[6290]])
-plot(fits[[order(sapply(fits, AIC))[1]]])
+## Choose a model. m = 1 is "best" model by AIC, m = 2 is "second
+## best", and so on.
+m <- 1
+fit <- fits[[order(sapply(fits, AIC))[m]]]
 
-fits[[order(sapply(fits, AIC))[4]]]$args
+## Do whatever you want with this model.
+fit.boot <- boot.popan(fit)
+summary(fit.boot)
+plot(fit)
+AIC(fit)
 
-plot(fits[[order(sapply(fits, AIC))[1]]])
-
- AIC(fits[[order(sapply(fits, AIC))[4]]])
-
-## list AICs of all possible models
-sort(sapply(fits, AIC))[1:10]
-## sort AICs of all models from the lowest to the highest
-order(sapply(fits, AIC))[1:10]
-
-best.fit <- do.call("fit.popan", args[[9507]])
-
-plot(best.fit)
-
-## best fit ####       
-best.fit <- fit.popan(caplist = captlist[1:2], model.list = list(b = ~ lag.mei,
-                                                                 phi = ~ 1,
-                                                                 p = ~ occasion),
-                      group.pars = list(b = TRUE, phi = FALSE, p = FALSE),
-                      df = covs)
-AIC(best.fit)
+## Playing about with model averaging.
+av.ENs <- model.average(fits)
+## Plotting model-averaged trajectories.
+plot(av.ENs[, 1], ylim = c(0, 800))
+lines(av.ENs[, 1])
+points(av.ENs[, 2], pch = 2)
+lines(av.ENs[, 2], lty = 2)
+## Comparing to the selected model.
+points(fit$ENs[, 1], col = "blue")
+lines(fit$ENs[, 1], col = "blue")
+points(fit$ENs[, 2], pch = 2, col = "blue")
+lines(fit$ENs[, 2], lty = 2, col = "blue")
 
 ## Bootstrapping to calculate CIs ####
 ## Carrying out a bootstrap procedure. This will take a while, and
