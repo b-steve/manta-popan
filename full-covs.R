@@ -367,7 +367,8 @@ cov.func <- function(formula, df, invlink = identity){
 fit.popan <- function(caplist, model.list = NULL, group.pars = NULL, group.effect = NULL, df = NULL, printit = FALSE){
     ## Saving function arguments.
     args <- list(caplist = caplist, model.list = model.list,
-                 group.pars = group.pars, df = df, printit = printit)
+                 group.pars = group.pars, group.effect = group.effect,
+                 df = df, printit = printit)
     ## If caplist is a matrix, turn it into a list for consistency.
     if (!is.list(caplist)){
         caplist <- list(caplist)
@@ -415,6 +416,10 @@ fit.popan <- function(caplist, model.list = NULL, group.pars = NULL, group.effec
     if (is.null(b.effect)){
         b.effect <- FALSE
     }
+    ## Error if we have both effect and not grouping.
+    if (!b.group & b.effect){
+        stop("You can't fit a group effect on parameter b if effects are not grouped.")
+    }
     ## Put an additive group effect.
     if (group.effect[["b"]]){
         n.b.par <- n.b.par + 1
@@ -455,6 +460,10 @@ fit.popan <- function(caplist, model.list = NULL, group.pars = NULL, group.effec
     if (is.null(phi.effect)){
         phi.effect <- FALSE
     }
+    ## Error if we have both effect and not grouping.
+    if (!phi.group & phi.effect){
+        stop("You can't fit a group effect on parameter phi if effects are not grouped.")
+    }
     ## Put an additive group effect.
     if (phi.effect){
         n.phi.par <- n.phi.par + 1
@@ -492,6 +501,10 @@ fit.popan <- function(caplist, model.list = NULL, group.pars = NULL, group.effec
     p.effect <- group.effect[["p"]]
     if (is.null(p.effect)){
         p.effect <- FALSE
+    }
+    ## Error if we have both effect and not grouping.
+    if (!p.group & p.effect){
+        stop("You can't fit a group effect on parameter p if effects are not grouped.")
     }
     ## Put an additive group effect.
     if (group.effect[["p"]]){
@@ -579,5 +592,18 @@ summary.popan <- function(boot.fit, par.fun = function(fit) fit$fit$par){
     out[, 4] <- upper.ci
     colnames(out) <- c("Estimate", "Std Error", "Lower CI", "Upper CI")
     rownames(out) <- names(ests)
+    out
+}
+
+model.average <- function(fits, par.fun = function(fit) fit$ENs){
+    n.fits <- length(fits)
+    aics <- sapply(fits, AIC)
+    min.aic <- min(aics)
+    w <- exp((min.aic - aics)/2)
+    w <- w/sum(w)
+    out <- 0*par.fun(fits[[1]])
+    for (i in 1:n.fits){
+        out <- out + w[i]*par.fun(fits[[i]])
+    }
     out
 }
