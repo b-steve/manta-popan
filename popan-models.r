@@ -102,6 +102,13 @@ sort(sapply(fits, AIC))[1:10]
 m <- 1
 fit <- fits[[order(sapply(fits, AIC))[m]]]
 
+## Choose the top m models.
+m <- 100
+## Extracting only these models from all fits.
+best.fits <- fits[order(sapply(fits, AIC))[1:m]]
+## Doing some bootstrap model averaging.
+fit.ma <- popan.ma(best.fits, boot = TRUE, n.cores = 3)
+
 ## Do whatever you want with this model.
 fit.boot <- boot.popan(fit)
 summary(fit.boot)
@@ -109,7 +116,10 @@ plot(fit)
 AIC(fit)
 
 ## Playing about with model averaging.
-av.ENs <- model.average(fits)
+av.ENs <- popan.ma(fits)
+
+str(fits[[1]])
+
 ## Plotting model-averaged trajectories.
 plot(av.ENs[, 1], ylim = c(0, 800))
 lines(av.ENs[, 1])

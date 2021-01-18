@@ -595,15 +595,48 @@ summary.popan <- function(boot.fit, par.fun = function(fit) fit$fit$par){
     out
 }
 
-model.average <- function(fits, par.fun = function(fit) fit$ENs){
+popan.ma <- function(fits, par.fun = function(fit) fit$ENs, boot = FALSE, n.boots = 10, n.cores = 1){
     n.fits <- length(fits)
     aics <- sapply(fits, AIC)
-    min.aic <- min(aics)
-    w <- exp((min.aic - aics)/2)
-    w <- w/sum(w)
-    out <- 0*par.fun(fits[[1]])
-    for (i in 1:n.fits){
-        out <- out + w[i]*par.fun(fits[[i]])
+    if (boot){
+        ## Getting original capture histories.
+        caplist <- fits[[1]]$args$caplist
+        ## Initialising args list.
+        args.boot <- lapply(fits, function(x) x$args)
+        ## Initialising output list.
+        out <- vector(mode = "list", length = n.boots)
+        for (i in 1:n.boots){
+            cat(i, "of", n.boots, "\n")
+            caplist.boot <- vector(mode = "list", length = length(caplist))
+            names(caplist.boot) <- names(caplist)
+            for (j in 1:length(caplist)){
+                ## Getting bootstrap sample of each group by sampling with
+                ## replacement.
+                caplist.boot[[j]] <- caplist[[j]][sample(nrow(caplist[[j]]), replace = TRUE), ]
+            }
+            ## Putting the bootstrap data into the components of the args list.
+            for (j in 1:n.fits){
+                args.boot[[j]]$caplist <- caplist.boot
+            }
+            ## Fitting each of the models to the bootstrapped data set.
+            fits.boot <- par.fit.popan(n.cores = n.cores, arg.list = args.boot)
+            aics.boot <- sapply(fits.boot, AIC)
+            which.model <- which(aics.boot == min(aics.boot))
+            out[[i]] <- list(phis = fits.boot[[which.model]]$phis,
+                             rhos = fits.boot[[which.model]]$rhos,
+                             ps = fits.boot[[which.model]]$ps,
+                             pents = fits.boot[[which.model]]$pents,
+                             ENs = fits.boot[[which.model]]$ENs,
+                             model.no = which.model)
+        }
+    } else {
+        min.aic <- min(aics)
+        w <- exp((min.aic - aics)/2)
+        w <- w/sum(w)
+        out <- 0*par.fun(fits[[1]])
+        for (i in 1:n.fits){
+            out <- out + w[i]*par.fun(fits[[i]])
+        }
     }
     out
 }
