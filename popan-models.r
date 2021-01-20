@@ -93,33 +93,22 @@ for (i in 1:((n.mods)/100)){
     cat(i, "of", (n.mods)/100, "\n")
 }
 
+save.image("savepoint.RData")
 ## list AICs of top-ten models.
 sort(sapply(fits, AIC))[1:10]
-
 
 ## Choose a model. m = 1 is "best" model by AIC, m = 2 is "second
 ## best", and so on.
 m <- 1
 fit <- fits[[order(sapply(fits, AIC))[m]]]
-
-## Choose the top m models.
-m <- 100
-## Extracting only these models from all fits.
-best.fits <- fits[order(sapply(fits, AIC))[1:m]]
-## Doing some bootstrap model averaging.
-fit.ma <- popan.ma(best.fits, boot = TRUE, n.cores = 3)
-
 ## Do whatever you want with this model.
 fit.boot <- boot.popan(fit)
 summary(fit.boot)
 plot(fit)
 AIC(fit)
 
-## Playing about with model averaging.
+## Playing about with model averaging using AIC weights.
 av.ENs <- popan.ma(fits)
-
-str(fits[[1]])
-
 ## Plotting model-averaged trajectories.
 plot(av.ENs[, 1], ylim = c(0, 800))
 lines(av.ENs[, 1])
@@ -130,6 +119,20 @@ points(fit$ENs[, 1], col = "blue")
 lines(fit$ENs[, 1], col = "blue")
 points(fit$ENs[, 2], pch = 2, col = "blue")
 lines(fit$ENs[, 2], lty = 2, col = "blue")
+
+## Choose the top m models.
+m <- 20
+## Extracting only these models from all fits.
+best.fits <- fits[order(sapply(fits, AIC))[1:m]]
+## Doing some bootstrap model averaging.
+fit.ma <- popan.ma(best.fits, boot = TRUE, n.cores = 3, n.boots = 100)
+
+
+
+
+
+
+
 
 ## Bootstrapping to calculate CIs ####
 ## Carrying out a bootstrap procedure. This will take a while, and
