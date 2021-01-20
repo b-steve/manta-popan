@@ -108,7 +108,7 @@ plot(fit)
 AIC(fit)
 
 ## Playing about with model averaging using AIC weights.
-av.ENs <- popan.ma(fits)
+av.ENs <- ma.popan(fits)
 ## Plotting model-averaged trajectories.
 plot(av.ENs[, 1], ylim = c(0, 800))
 lines(av.ENs[, 1])
@@ -124,15 +124,59 @@ lines(fit$ENs[, 2], lty = 2, col = "blue")
 m <- 20
 ## Extracting only these models from all fits.
 best.fits <- fits[order(sapply(fits, AIC))[1:m]]
+best.AICs <- sapply(best.fits, AIC)
+## Making a dot chart for AICs.
+dotchart(sapply(best.fits, AIC))
+abline(v = min(best.AICs) + 10)
 ## Doing some bootstrap model averaging.
-fit.ma <- popan.ma(best.fits, boot = TRUE, n.cores = 3, n.boots = 100)
+fit.ma <- ma.popan(best.fits, boot = TRUE, n.cores = 3, n.boots = 100)
+## Number of times each model was chosen.
+table(sapply(fit.ma, function(x) x$model.no))
+## Getting averaged ENs from weighting and the bootstrap.
+av.ENs.w <- ma.popan(best.fits)
+av.ENs.boot <- apply(sapply(fit.ma, function(x) x$ENs), 1, mean)
 
+## Model summary for ENs for each group from the bootstrapped model averaging.
+ENs.summary <- summary(fit.ma, par.fun = function(fit) fit$ENs)
+## Plotting population trajectory for the first group, with CIs.
+plot(ENs.summary[1:11, 1], ylim = c(0, max(ENs.summary[, 4])))
+lines(ENs.summary[1:11, 1])
+lines(ENs.summary[1:11, 3], lty = "dotted")
+lines(ENs.summary[1:11, 4], lty = "dotted")
+## Plotting population trajectory for the second group, with CIs.
+points(ENs.summary[12:22, 1], ylim = c(0, max(ENs.summary[, 4])), col = "blue")
+lines(ENs.summary[12:22, 1], col = "blue")
+lines(ENs.summary[12:22, 3], lty = "dotted", col = "blue")
+lines(ENs.summary[12:22, 4], lty = "dotted", col = "blue")
 
+## Model summary for the total population size from the bootstrapped model averaging.
+tot.ENs.summary <- summary(fit.ma, par.fun = function(fit) apply(fit$ENs, 1, sum))
+## Plotting population trajectory for the first group, with CIs.
+plot(tot.ENs.summary[1:11, 1], ylim = c(0, max(tot.ENs.summary[, 4])))
+lines(tot.ENs.summary[1:11, 1])
+lines(tot.ENs.summary[1:11, 3], lty = "dotted")
+lines(tot.ENs.summary[1:11, 4], lty = "dotted")
 
-
-
-
-
+## Plotting model-averaged trajectories from weighted AIC.
+plot(av.ENs.w[, 1], ylim = c(0, 800))
+lines(av.ENs.w[, 1])
+points(av.ENs.w[, 2], pch = 2)
+lines(av.ENs.w[, 2], lty = 2)
+## Comparing to bootstrap approach.
+points(av.ENs.boot[1:11], col = "blue")
+lines(av.ENs.boot[1:11], col = "blue")
+points(av.ENs.boot[12:22], pch = 2, col = "blue")
+lines(av.ENs.boot[12:22], lty = 2, col = "blue")
+## Plotting model-averaged trajectories from weighted AIC based on all models.
+points(av.ENs[, 1], ylim = c(0, 800), col = "red")
+lines(av.ENs[, 1], col = "red")
+points(av.ENs[, 2], pch = 2, col = "red")
+lines(av.ENs[, 2], lty = 2, col = "red")
+## Comparing to the best model.
+points(fit$ENs[, 1], col = "green")
+lines(fit$ENs[, 1], col = "green")
+points(fit$ENs[, 2], pch = 2, col = "green")
+lines(fit$ENs[, 2], lty = 2, col = "green")
 
 ## Bootstrapping to calculate CIs ####
 ## Carrying out a bootstrap procedure. This will take a while, and
