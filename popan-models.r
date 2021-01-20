@@ -94,8 +94,10 @@ for (i in 1:((n.mods)/100)){
 }
 
 save.image("savepoint.RData")
-## list AICs of top-ten models.
+## Print AICs of top-ten models.
 sort(sapply(fits, AIC))[1:10]
+## Save all AICs.
+fits.AICs <- sapply(fits, AIC)
 
 ## Choose a model. m = 1 is "best" model by AIC, m = 2 is "second
 ## best", and so on.
@@ -120,10 +122,8 @@ lines(fit$ENs[, 1], col = "blue")
 points(fit$ENs[, 2], pch = 2, col = "blue")
 lines(fit$ENs[, 2], lty = 2, col = "blue")
 
-## Choose the top m models.
-m <- 20
-## Extracting only these models from all fits.
-best.fits <- fits[order(sapply(fits, AIC))[1:m]]
+## Selecting fits with AIC within 10 units of the best.
+best.fits <- fits[fits.AICs - min(fits.AICs) <= 10]
 best.AICs <- sapply(best.fits, AIC)
 ## Making a dot chart for AICs.
 dotchart(sapply(best.fits, AIC))
