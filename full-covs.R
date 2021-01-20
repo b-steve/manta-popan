@@ -595,7 +595,7 @@ summary.popan <- function(boot.fit, par.fun = function(fit) fit$fit$par){
     out
 }
 
-popan.ma <- function(fits, par.fun = function(fit) fit$ENs, boot = FALSE, n.boots = 10, n.cores = 1){
+ma.popan <- function(fits, par.fun = function(fit) fit$ENs, boot = FALSE, n.boots = 10, n.cores = 1){
     n.fits <- length(fits)
     aics <- sapply(fits, AIC)
     if (boot){
@@ -629,6 +629,7 @@ popan.ma <- function(fits, par.fun = function(fit) fit$ENs, boot = FALSE, n.boot
                              ENs = fits.boot[[which.model]]$ENs,
                              model.no = which.model)
         }
+        class(out) <- "ma.popan"
     } else {
         min.aic <- min(aics)
         w <- exp((min.aic - aics)/2)
@@ -638,5 +639,20 @@ popan.ma <- function(fits, par.fun = function(fit) fit$ENs, boot = FALSE, n.boot
             out <- out + w[i]*par.fun(fits[[i]])
         }
     }
+    out
+}
+
+summary.ma.popan <- function(ma.fit, par.fun = function(fit) fit$ENs){
+    boots.par <- sapply(ma.fit, par.fun)
+    ests <- apply(boots.par, 1, mean)
+    ses <- apply(boots.par, 1, sd)
+    lower.ci <- apply(boots.par, 1, quantile, probs = 0.025)
+    upper.ci <- apply(boots.par, 1, quantile, probs = 0.975)
+    out <- matrix(0, nrow = length(ests), ncol = 4)
+        out[, 1] <- ests
+    out[, 2] <- ses
+    out[, 3] <- lower.ci
+    out[, 4] <- upper.ci
+    colnames(out) <- c("Estimate", "Std Error", "Lower CI", "Upper CI")
     out
 }
