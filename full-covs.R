@@ -595,64 +595,115 @@ summary.popan <- function(boot.fit, par.fun = function(fit) fit$fit$par){
     out
 }
 
-ma.popan <- function(fits, par.fun = function(fit) fit$ENs, boot = FALSE, n.boots = 10, n.cores = 1){
+boot.ma.popan <- function(fits, n.boots = 10, n.cores = 1){
     n.fits <- length(fits)
     aics <- sapply(fits, AIC)
-    if (boot){
-        ## Getting original capture histories.
-        caplist <- fits[[1]]$args$caplist
-        ## Initialising args list.
-        args.boot <- lapply(fits, function(x) x$args)
-        ## Initialising output list.
-        out <- vector(mode = "list", length = n.boots)
-        for (i in 1:n.boots){
-            cat(i, "of", n.boots, "\n")
-            caplist.boot <- vector(mode = "list", length = length(caplist))
-            names(caplist.boot) <- names(caplist)
-            for (j in 1:length(caplist)){
-                ## Getting bootstrap sample of each group by sampling with
-                ## replacement.
-                caplist.boot[[j]] <- caplist[[j]][sample(nrow(caplist[[j]]), replace = TRUE), ]
-            }
-            ## Putting the bootstrap data into the components of the args list.
-            for (j in 1:n.fits){
-                args.boot[[j]]$caplist <- caplist.boot
-            }
-            ## Fitting each of the models to the bootstrapped data set.
-            fits.boot <- par.fit.popan(n.cores = n.cores, arg.list = args.boot)
-            aics.boot <- sapply(fits.boot, AIC)
-            which.model <- which(aics.boot == min(aics.boot))
-            out[[i]] <- list(phis = fits.boot[[which.model]]$phis,
-                             rhos = fits.boot[[which.model]]$rhos,
-                             ps = fits.boot[[which.model]]$ps,
-                             pents = fits.boot[[which.model]]$pents,
-                             ENs = fits.boot[[which.model]]$ENs,
-                             model.no = which.model)
-        }
-        class(out) <- "ma.popan"
-    } else {
-        min.aic <- min(aics)
-        w <- exp((min.aic - aics)/2)
-        w <- w/sum(w)
-        out <- 0*par.fun(fits[[1]])
-        for (i in 1:n.fits){
-            out <- out + w[i]*par.fun(fits[[i]])
-        }
+    ## Getting point estimates using weighted AIC model averaging from
+    ## the original fits.
+    min.aic <- min(aics)
+    w <- exp((min.aic - aics)/2)
+    w <- w/sum(w)
+    phis.weighted <- 0*fits[[1]]$phis
+    rhos.weighted <- 0*fits[[1]]$rhos
+    ps.weighted <- 0*fits[[1]]$ps
+    pents.weighted <- 0*fits[[1]]$pents
+    ENs.weighted <- 0*fits[[1]]$ENs
+    for (j in 1:n.fits){
+        phis.weighted <- phis.weighted + w[j]*fits[[j]]$phis
+        rhos.weighted <- rhos.weighted + w[j]*fits[[j]]$rhos
+        ps.weighted <- ps.weighted + w[j]*fits[[j]]$ps
+        pents.weighted <- pents.weighted + w[j]*fits[[j]]$pents
+        ENs.weighted <- ENs.weighted + w[j]*fits[[j]]$ENs
     }
+    out.weighted.ests <- list(phis = phis.weighted,
+                              rhos = rhos.weighted,
+                              ps = ps.weighted,
+                              petns = pents.weighted,
+                              ENs = ENs.weighted,
+                              ENs.tot = apply(ENs.weighted, 1, sum))
+    ## Getting original capture histories.
+    caplist <- fits[[1]]$args$caplist
+    ## Initialising args list.
+    args.boot <- lapply(fits, function(x) x$args)
+    ## Initialising output list.
+    out.best <- vector(mode = "list", length = n.boots)
+    out.weighted <- vector(mode = "list", length = n.boots)
+    for (i in 1:n.boots){
+        cat(i, "of", n.boots, "\n")
+        caplist.boot <- vector(mode = "list", length = length(caplist))
+        names(caplist.boot) <- names(caplist)
+        for (j in 1:length(caplist)){
+            ## Getting bootstrap sample of each group by sampling with
+            ## replacement.
+            caplist.boot[[j]] <- caplist[[j]][sample(nrow(caplist[[j]]), replace = TRUE), ]
+        }
+        ## Putting the bootstrap data into the components of the args list.
+        for (j in 1:n.fits){
+            args.boot[[j]]$caplist <- caplist.boot
+        }
+        ## Fitting each of the models to the bootstrapped data set.
+        fits.boot <- par.fit.popan(n.cores = n.cores, arg.list = args.boot)
+        aics.boot <- sapply(fits.boot, AIC)
+        ## Finding the best and saving results for the Buckland approach.
+        which.model <- which(aics.boot == min(aics.boot))
+        out.best[[i]] <- list(phis = fits.boot[[which.model]]$phis,
+                              rhos = fits.boot[[which.model]]$rhos,
+                              ps = fits.boot[[which.model]]$ps,
+                              pents = fits.boot[[which.model]]$pents,
+                              ENs = fits.boot[[which.model]]$ENs,
+                              ENs.tot = apply(fits.boot[[which.model]]$ENs, 1, sum),
+                              model.no = which.model)
+        ## Alternatively, doing AIC weighting.
+        min.aic.boot <- min(aics.boot)
+        w.boot <- exp((min.aic.boot - aics.boot)/2)
+        w.boot <- w.boot/sum(w.boot)
+        phis.weighted.boot <- 0*fits.boot[[1]]$phis
+        rhos.weighted.boot <- 0*fits.boot[[1]]$rhos
+        ps.weighted.boot <- 0*fits.boot[[1]]$ps
+        pents.weighted.boot <- 0*fits.boot[[1]]$pents
+        ENs.weighted.boot <- 0*fits.boot[[1]]$ENs
+        for (j in 1:n.fits){
+            phis.weighted.boot <- phis.weighted.boot + w[j]*fits.boot[[j]]$phis
+            rhos.weighted.boot <- rhos.weighted.boot + w[j]*fits.boot[[j]]$rhos
+            ps.weighted.boot <- ps.weighted.boot + w[j]*fits.boot[[j]]$ps
+            pents.weighted.boot <- pents.weighted.boot + w[j]*fits.boot[[j]]$pents
+            ENs.weighted.boot <- ENs.weighted.boot + w[j]*fits.boot[[j]]$ENs
+        }
+        out.weighted[[i]] <- list(phis = phis.weighted.boot,
+                                  rhos = rhos.weighted.boot,
+                                  ps = ps.weighted.boot,
+                                  petns = pents.weighted.boot,
+                                  ENs = ENs.weighted.boot,
+                                  ENs.tot = apply(ENs.weighted.boot, 1, sum))
+    }
+    out <- list(best = out.best, weighted = out.weighted, weighted.ests = out.weighted.ests)
+    class(out) <- "ma.popan"
     out
 }
 
-summary.ma.popan <- function(ma.fit, par.fun = function(fit) fit$ENs){
-    boots.par <- sapply(ma.fit, par.fun)
-    ests <- apply(boots.par, 1, mean)
+summary.ma.popan <- function(fit.ma, method = "weighted", pars = "ENs"){
+    boots.par <- sapply(fit.ma[[method]], function(x) x[[pars]])
+    if (method == "weighted"){
+        ests <- fit.ma$weighted.ests[[pars]]
+        mean.boot <- apply(boots.par, 1, mean)
+    } else if (method == "best"){
+        ests <- apply(boots.par, 1, mean)
+    } else {
+        stop("Argument 'method' must be \"best\" or \"weighted\"")
+    }
     ses <- apply(boots.par, 1, sd)
     lower.ci <- apply(boots.par, 1, quantile, probs = 0.025)
     upper.ci <- apply(boots.par, 1, quantile, probs = 0.975)
-    out <- matrix(0, nrow = length(ests), ncol = 4)
-        out[, 1] <- ests
+    out <- matrix(0, nrow = length(ests), ncol = ifelse(method == "weighted", 5, 4))
+    out[, 1] <- ests
     out[, 2] <- ses
     out[, 3] <- lower.ci
     out[, 4] <- upper.ci
-    colnames(out) <- c("Estimate", "Std Error", "Lower CI", "Upper CI")
+    if (method == "weighted"){
+        out[, 5] <- mean.boot
+        colnames(out) <- c("Estimate", "Std Error", "Lower CI", "Upper CI", "Mean Boot")
+    } else {
+        colnames(out) <- c("Estimate", "Std Error", "Lower CI", "Upper CI")
+    }
     out
 }
