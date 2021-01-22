@@ -93,7 +93,6 @@ for (i in 1:((n.mods)/100)){
     cat(i, "of", (n.mods)/100, "\n")
 }
 
-save.image("savepoint.RData")
 ## Print AICs of top-ten models.
 sort(sapply(fits, AIC))[1:10]
 ## Save all AICs.
