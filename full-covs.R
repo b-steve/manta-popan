@@ -628,6 +628,7 @@ boot.ma.popan <- function(fits, n.boots = 10, n.cores = 1){
     ## Initialising output list.
     out.best <- vector(mode = "list", length = n.boots)
     out.weighted <- vector(mode = "list", length = n.boots)
+    out.ests.boot <- vector(mode = "list", length = n.boots)
     for (i in 1:n.boots){
         cat(i, "of", n.boots, "\n")
         caplist.boot <- vector(mode = "list", length = length(caplist))
@@ -675,8 +676,10 @@ boot.ma.popan <- function(fits, n.boots = 10, n.cores = 1){
                                   petns = pents.weighted.boot,
                                   ENs = ENs.weighted.boot,
                                   ENs.tot = apply(ENs.weighted.boot, 1, sum))
+        ## Saving all the fits for weighted bootstrap.
+        out.ests.boot[[i]] <- lapply(fits.boot, function(x) x[c("phis", "rhos", "ps", "pents", "ENs")])
     }
-    out <- list(best = out.best, weighted = out.weighted, weighted.ests = out.weighted.ests)
+    out <- list(best = out.best, weighted = out.weighted, weighted.ests = out.weighted.ests, ests.boot = out.ests.boot)
     class(out) <- "ma.popan"
     out
 }
