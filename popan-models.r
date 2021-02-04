@@ -8,7 +8,7 @@ load("2020.10.23_manta.RData")
 
 enso.df <- read.csv("enso.csv")
 
-for (i in 1:7){
+for (i in 1:3){
     covs[, paste0("lag", i, ".mei")] <- enso.df[(8 - i):(18 - i), 2]
 }
 
@@ -39,7 +39,7 @@ for (group.b.i in 1:2){
                 } else {
                     b.mod <- as.formula(paste0("~ ", "lag", b.i - 3, ".mei"))
                 }
-                for (phi.i in 1:10){
+                for (phi.i in 1:6){
                     if (phi.i == 1){
                         phi.mod <- ~ occasion
                     } else if (phi.i == 2){
@@ -49,7 +49,7 @@ for (group.b.i in 1:2){
                     } else {
                         phi.mod <- as.formula(paste0("~ ", "lag", phi.i - 3, ".mei"))
                     }
-                    for (p.i in 1:19){
+                    for (p.i in 1:11){
                         if (p.i == 1){
                             p.mod <- ~ occasion
                         } else if (p.i == 2){
