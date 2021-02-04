@@ -83,14 +83,14 @@ for (group.b.i in 1:2){
     }
 }
 
-## Fitting in 100-model batches.
+## Fitting in 40-model batches.
 n.mods <- length(args)
 fits <- vector(mode = "list", length = n.mods)
-for (i in 1:((n.mods)/100)){
-    start <- 100*(i - 1) + 1
-    end <- 100*(i - 1) + 100
+for (i in 1:((n.mods)/40)){
+    start <- 40*(i - 1) + 1
+    end <- 40*(i - 1) + 40
     fits[start:end] <- par.fit.popan(3, arg.list = args[start:end])
-    cat(i, "of", (n.mods)/100, "\n")
+    cat(i, "of", (n.mods)/40, "\n")
 }
 
 ## Print AICs of top-ten models.
