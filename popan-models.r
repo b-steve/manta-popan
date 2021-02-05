@@ -29,7 +29,7 @@ k <- 1
 for (group.b.i in 1:2){
     for (group.phi.i in 1:2){
         for (group.p.i in 1:2){
-            for (b.i in 1:10){
+            for (b.i in 1:6){
                 if (b.i == 1){
                     b.mod <- ~ occasion
                 } else if (b.i == 2){
@@ -83,14 +83,14 @@ for (group.b.i in 1:2){
     }
 }
 
-## Fitting in 40-model batches.
+## Fitting in 32-model batches.
 n.mods <- length(args)
 fits <- vector(mode = "list", length = n.mods)
-for (i in 1:((n.mods)/40)){
-    start <- 40*(i - 1) + 1
-    end <- 40*(i - 1) + 40
+for (i in 1:((n.mods)/32)){
+    start <- 32*(i - 1) + 1
+    end <- 32*(i - 1) + 32
     fits[start:end] <- par.fit.popan(3, arg.list = args[start:end])
-    cat(i, "of", (n.mods)/40, "\n")
+    cat(i, "of", (n.mods)/32, "\n")
 }
 
 ## Print AICs of top-ten models.
