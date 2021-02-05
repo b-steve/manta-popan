@@ -105,6 +105,7 @@ fits.AICs <- sapply(fits, AIC)
 ## year 7 to lower detection probability.
 m <- 1
 fit <- fits[[order(sapply(fits, AIC))[m]]]
+boot.popan(fit, 1000)
 plot(fit)
 AIC(fit)
 
@@ -161,3 +162,43 @@ lines(ENs.tot.ma.best[, 4], lty = "dotted", col = "blue")
 points(ENs.tot.ma.weighted[, 1], col = "red")
 lines(ENs.tot.ma.weighted[, 1], col = "red")
 
+## Getting standard errors from all the models.
+n.best.models <- length(fit.ma$ests.boot[[1]])
+n.boot <- length(fit.ma$ests.boot)
+n.pargroups <- length(fit.ma$ests.boot[[1]][[1]])
+best.model.ests <- vector(mode = "list", length = n.best.models)
+best.model.ses <- vector(mode = "list", length = n.best.models)
+for (i in 1:n.best.models){
+    best.model.ests[[i]] <- vector(mode = "list", length = n.pargroups)
+    names(best.model.ests[[i]]) <- names(fit.ma$ests.boot[[1]][[i]])
+    best.model.ses[[i]] <- vector(mode = "list", length =  n.pargroups)
+    names(best.model.ses[[i]]) <- names(fit.ma$ests.boot[[1]][[i]])
+    for (j in 1:n.pargroups){
+        best.model.ests[[i]][[names(best.model.ests[[i]])[j]]] <- c(best.fits[[i]][[names(best.model.ests[[i]])[j]]])
+        par.mat <- sapply(fit.ma$ests.boot, function(x, mod, grp) x[[mod]][[grp]], mod = i, grp = j)
+        best.model.ses[[i]][[j]] <- apply(par.mat, 1, sd)
+    }
+}
+
+mata.ci <- function(ests, ses, weights, level = 0.95){
+    alpha <- (1 - level)/2
+    obj.lower <- function(lower){
+        tl <- (ests - lower)/ses
+        (sum(weights*(1 - pnorm(tl))) - alpha)^2
+    }
+    obj.upper <- function(upper){
+        tl <- (ests - upper)/ses
+        (sum(weights*pnorm(tl)) - alpha)^2
+    }
+    c(nlminb(mean(ests), obj.lower)$par, nlminb(mean(ests), obj.upper)$par)
+}
+
+n.pars <- length(best.model.ests[[1]][[5]])
+mata.cis <- matrix(0, nrow = n.pars, ncol = 2)
+for (i in 1:n.pars){
+    ests <- sapply(best.model.ests, function(x) x[[5]][i])
+    ses <- sapply(best.model.ses, function(x) x[[5]][i])
+    weights <- exp((min(best.AICs) - best.AICs)/2)
+    level <- 0.95
+    mata.cis[i, ] <- mata.ci(ests, ses, weights)
+}
