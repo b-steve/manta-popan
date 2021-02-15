@@ -684,11 +684,13 @@ boot.ma.popan <- function(fits, n.boots = 10, n.cores = 1){
     out
 }
 
-summary.ma.popan <- function(fit.ma, method = "weighted", pars = "ENs"){
+summary.ma.popan <- function(fit.ma, method = "weighted", pars = "ENs", diffs = FALSE){
     boots.par <- sapply(fit.ma[[method]], function(x) x[[pars]])
+    if (diffs){
+        boots.par <- apply(boots.par, 2, function(x) outer(x, x, `-`))
+    }
     if (method == "weighted"){
-        ests <- fit.ma$weighted.ests[[pars]]
-        mean.boot <- apply(boots.par, 1, mean)
+        ests <- apply(boots.par, 1, mean)
     } else if (method == "best"){
         ests <- apply(boots.par, 1, mean)
     } else {
@@ -697,16 +699,25 @@ summary.ma.popan <- function(fit.ma, method = "weighted", pars = "ENs"){
     ses <- apply(boots.par, 1, sd)
     lower.ci <- apply(boots.par, 1, quantile, probs = 0.025)
     upper.ci <- apply(boots.par, 1, quantile, probs = 0.975)
-    out <- matrix(0, nrow = length(ests), ncol = ifelse(method == "weighted", 5, 4))
+    out <- matrix(0, nrow = length(ests), ncol = ifelse(diffs, 5, 4))
+    if (diffs){
+        ps <- apply(boots.par, 1, boot.p)
+        out[, 5] <- ps
+    }
     out[, 1] <- ests
     out[, 2] <- ses
     out[, 3] <- lower.ci
     out[, 4] <- upper.ci
-    if (method == "weighted"){
-        out[, 5] <- mean.boot
-        colnames(out) <- c("Estimate", "Std Error", "Lower CI", "Upper CI", "Mean Boot")
-    } else {
-        colnames(out) <- c("Estimate", "Std Error", "Lower CI", "Upper CI")
-    }
+    colnames(out) <- c("Estimate", "Std Error", "Lower CI", "Upper CI", "P-value"[diffs])
     out
+}
+
+boot.p <- function(x){
+    check.lower <- median(x) >= 0
+    if (check.lower){
+        p.tail <- mean(x <= 0)
+    } else {
+        p.tail <- mean(x >= 0)
+    }
+    2*p.tail
 }
