@@ -684,8 +684,14 @@ boot.ma.popan <- function(fits, n.boots = 10, n.cores = 1){
     out
 }
 
-summary.ma.popan <- function(fit.ma, method = "weighted", pars = "ENs", diffs = FALSE){
-    boots.par <- sapply(fit.ma[[method]], function(x) x[[pars]])
+summary.ma.popan <- function(fit.ma, method = "weighted", pars = "ENs", diffs = FALSE, par.fun = NULL, par.fun.p = FALSE){
+    if (is.null(par.fun)){
+        par.fun <- function(x) x[[pars]]
+    }
+    boots.par <- sapply(fit.ma[[method]], par.fun)
+    if (!is.matrix(boots.par)){
+        boots.par <- matrix(boots.par, nrow = 1)
+    }
     if (diffs){
         boots.par <- apply(boots.par, 2, function(x) outer(x, x, `-`))
     }
@@ -699,8 +705,8 @@ summary.ma.popan <- function(fit.ma, method = "weighted", pars = "ENs", diffs = 
     ses <- apply(boots.par, 1, sd)
     lower.ci <- apply(boots.par, 1, quantile, probs = 0.025)
     upper.ci <- apply(boots.par, 1, quantile, probs = 0.975)
-    out <- matrix(0, nrow = length(ests), ncol = ifelse(diffs, 5, 4))
-    if (diffs){
+    out <- matrix(0, nrow = length(ests), ncol = ifelse(diffs | par.fun.p, 5, 4))
+    if (diffs | par.fun.p){
         ps <- apply(boots.par, 1, boot.p)
         out[, 5] <- ps
     }
@@ -708,16 +714,16 @@ summary.ma.popan <- function(fit.ma, method = "weighted", pars = "ENs", diffs = 
     out[, 2] <- ses
     out[, 3] <- lower.ci
     out[, 4] <- upper.ci
-    colnames(out) <- c("Estimate", "Std Error", "Lower CI", "Upper CI", "P-value"[diffs])
+    colnames(out) <- c("Estimate", "Std Error", "Lower CI", "Upper CI", "P-value"[diffs | par.fun.p])
     out
 }
 
 boot.p <- function(x){
-    check.lower <- median(x) >= 0
-    if (check.lower){
-        p.tail <- mean(x <= 0)
-    } else {
-        p.tail <- mean(x >= 0)
-    }
-    2*p.tail
+    n.boot <- length(x)
+    n.zeros <- sum(x == 0)
+    n.lt <- sum(x < 0)
+    n.ut <- sum(x > 0)
+    p.lt <- 2*(0.5*n.zeros + n.lt)/n.boot
+    p.ut <- 2*(0.5*n.zeros + n.ut)/n.boot
+    min(p.lt, p.ut)
 }

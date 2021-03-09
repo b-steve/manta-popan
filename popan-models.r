@@ -121,6 +121,19 @@ fit.ma <- boot.ma.popan(best.fits, n.cores = 3, n.boots = 1000)
 ENs.ma.weighted <- summary(fit.ma, method = "weighted")
 ENs.ma.best <- summary(fit.ma, method = "best")
 
+## P-value stuff.
+
+## Testing total population size at year 11 vs year 1.
+summary(fit.ma, method = "best", par.fun = function(x) sum(x[["ENs"]][11, ]) - sum(x[["ENs"]][1, ]),
+        par.fun.p = TRUE)
+## Testing average recruitment and survival over time of males vs females.
+summary(fit.ma, method = "best", par.fun = function(x) diff(apply(x[["rhos"]], 2, mean)),
+        par.fun.p = TRUE)
+
+
+
+
+
 ## Plotting population trajectory for the first group, with CIs, for the weighted method.
 plot(ENs.ma.weighted[1:11, 1], ylim = c(0, max(ENs.ma.weighted[, 4])))
 lines(ENs.ma.weighted[1:11, 1])
@@ -161,44 +174,3 @@ lines(ENs.tot.ma.best[, 3], lty = "dotted", col = "blue")
 lines(ENs.tot.ma.best[, 4], lty = "dotted", col = "blue")
 points(ENs.tot.ma.weighted[, 1], col = "red")
 lines(ENs.tot.ma.weighted[, 1], col = "red")
-
-## Getting standard errors from all the models.
-n.best.models <- length(fit.ma$ests.boot[[1]])
-n.boot <- length(fit.ma$ests.boot)
-n.pargroups <- length(fit.ma$ests.boot[[1]][[1]])
-best.model.ests <- vector(mode = "list", length = n.best.models)
-best.model.ses <- vector(mode = "list", length = n.best.models)
-for (i in 1:n.best.models){
-    best.model.ests[[i]] <- vector(mode = "list", length = n.pargroups)
-    names(best.model.ests[[i]]) <- names(fit.ma$ests.boot[[1]][[i]])
-    best.model.ses[[i]] <- vector(mode = "list", length =  n.pargroups)
-    names(best.model.ses[[i]]) <- names(fit.ma$ests.boot[[1]][[i]])
-    for (j in 1:n.pargroups){
-        best.model.ests[[i]][[names(best.model.ests[[i]])[j]]] <- c(best.fits[[i]][[names(best.model.ests[[i]])[j]]])
-        par.mat <- sapply(fit.ma$ests.boot, function(x, mod, grp) x[[mod]][[grp]], mod = i, grp = j)
-        best.model.ses[[i]][[j]] <- apply(par.mat, 1, sd)
-    }
-}
-
-mata.ci <- function(ests, ses, weights, level = 0.95){
-    alpha <- (1 - level)/2
-    obj.lower <- function(lower){
-        tl <- (ests - lower)/ses
-        (sum(weights*(1 - pnorm(tl))) - alpha)^2
-    }
-    obj.upper <- function(upper){
-        tl <- (ests - upper)/ses
-        (sum(weights*pnorm(tl)) - alpha)^2
-    }
-    c(nlminb(mean(ests), obj.lower)$par, nlminb(mean(ests), obj.upper)$par)
-}
-
-n.pars <- length(best.model.ests[[1]][[5]])
-mata.cis <- matrix(0, nrow = n.pars, ncol = 2)
-for (i in 1:n.pars){
-    ests <- sapply(best.model.ests, function(x) x[[5]][i])
-    ses <- sapply(best.model.ses, function(x) x[[5]][i])
-    weights <- exp((min(best.AICs) - best.AICs)/2)
-    level <- 0.95
-    mata.cis[i, ] <- mata.ci(ests, ses, weights)
-}
