@@ -1,18 +1,72 @@
+## Loading a few packages.
 library(mgcv)
 library(parallel)
+library(R2ucare)
 ## Sourcing model fitting functions.
 source("Rfunc.R")
 source("full-covs.R")
 ## Reading in data.
-load("2020.10.23_manta.RData")
+load("manta.RData")
 
-enso.df <- read.csv("enso.csv")
+## Some goodness-of-fit testing.
+dampier.female.hist <- dampier.captlist$female
+dampier.female.freq <- rep(1, nrow(dampier.female.hist))
 
-for (i in 1:3){
-    covs[, paste0("lag", i, ".mei")] <- enso.df[(8 - i):(18 - i), 2]
-}
+## Test 2 roughly tests for equal detectability: do individuals who
+## were captured on occation i and are alive at occation (i + 1) have
+## the same capture probability on occasion (i + 1) as individuals who
+## were not captured on occasion i and are alive at occasion (i + 1)?
+test2cl(dampier.female.hist, dampier.female.freq)
+test2ct(dampier.female.hist, dampier.female.freq)
+## Test 3 roughly tests for equal survival: are individuals who were
+## first seen on occasion i seen at different rates in future than
+## those individuals who were seen on occasion i, but not for the
+## first time?
+test3sr(dampier.female.hist, dampier.female.freq)
+test3sm(dampier.female.hist, dampier.female.freq)
+## An overall test incorporating all of the above.
+overall_CJS(dampier.female.hist, dampier.female.freq)
 
+dampier.male.hist <- dampier.captlist$male
+dampier.male.freq <- rep(1, nrow(dampier.male.hist))
 
+test2cl(dampier.male.hist, dampier.male.freq)
+test2ct(dampier.male.hist, dampier.male.freq)
+test3sr(dampier.male.hist, dampier.male.freq)
+test3sm(dampier.male.hist, dampier.male.freq)
+overall_CJS(dampier.male.hist, dampier.male.freq)
+
+misool.female.hist <- misool.captlist$female
+misool.female.freq <- rep(1, nrow(misool.female.hist))
+
+test2cl(misool.female.hist, misool.female.freq)
+test2ct(misool.female.hist, misool.female.freq)
+test3sr(misool.female.hist, misool.female.freq)
+test3sm(misool.female.hist, misool.female.freq)
+overall_CJS(misool.female.hist, misool.female.freq)
+
+misool.male.hist <- misool.captlist$male
+misool.male.freq <- rep(1, nrow(misool.male.hist))
+
+test2cl(misool.male.hist, misool.male.freq)
+test2ct(misool.male.hist, misool.male.freq)
+test3sr(misool.male.hist, misool.male.freq)
+test3sm(misool.male.hist, misool.male.freq)
+overall_CJS(misool.male.hist, misool.male.freq)
+
+dampier.fit.full <- fit.popan(dampier.captlist, model.list = list(b = ~ occasion,
+                                                                  phi = ~ occasion,
+                                                                  p = ~ occasion),
+                              group.pars = list(b = FALSE, phi = FALSE, p = FALSE),
+                              group.effect = list(b = FALSE, phi = FALSE, p = FALSE))
+plot(dampier.fit.full)
+
+misool.fit.full <- fit.popan(misool.captlist, model.list = list(b = ~ occasion,
+                                                                  phi = ~ occasion,
+                                                                  p = ~ occasion),
+                              group.pars = list(b = FALSE, phi = FALSE, p = FALSE),
+                              group.effect = list(b = FALSE, phi = FALSE, p = FALSE))
+plot(misool.fit.full)
 
 ## A model with fit.popan ####
 fit.full <- fit.popan(captlist[1:2], model.list = list(b = ~ 1,
@@ -23,7 +77,7 @@ fit.full <- fit.popan(captlist[1:2], model.list = list(b = ~ 1,
                       df = covs)
 
 plot(fit.full)
-
+captlist <- dampier.captlist
 args <- list()
 k <- 1
 for (group.b.i in 1:2){
