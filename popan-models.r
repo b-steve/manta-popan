@@ -54,6 +54,7 @@ test3sr(misool.male.hist, misool.male.freq)
 test3sm(misool.male.hist, misool.male.freq)
 overall_CJS(misool.male.hist, misool.male.freq)
 
+## Full Dampier model.
 dampier.fit.full <- fit.popan(dampier.captlist, model.list = list(b = ~ occasion,
                                                                   phi = ~ occasion,
                                                                   p = ~ occasion),
@@ -61,6 +62,7 @@ dampier.fit.full <- fit.popan(dampier.captlist, model.list = list(b = ~ occasion
                               group.effect = list(b = FALSE, phi = FALSE, p = FALSE))
 plot(dampier.fit.full)
 
+## Full Misool model.
 misool.fit.full <- fit.popan(misool.captlist, model.list = list(b = ~ occasion,
                                                                   phi = ~ occasion,
                                                                   p = ~ occasion),
@@ -68,68 +70,95 @@ misool.fit.full <- fit.popan(misool.captlist, model.list = list(b = ~ occasion,
                               group.effect = list(b = FALSE, phi = FALSE, p = FALSE))
 plot(misool.fit.full)
 
-## A model with fit.popan ####
-fit.full <- fit.popan(captlist[1:2], model.list = list(b = ~ 1,
-                                                        phi = ~ occasion,
-                                                        p = ~ occasion),
-                      group.pars = list(b = TRUE, phi = TRUE, p = TRUE),
-                      group.effect = list(b = TRUE, phi = TRUE, p = TRUE),
-                      df = covs)
+## Consider the following types of group effects for each parameter:
+## - Separately estimated (group.pars = FALSE, group.effect = FALSE).
+## - Group effect (group.pars = TRUE, group.effect = TRUE).
+## - Same parameters (group.pars = TRUE, group.effect = FALSE).
+## Consider the following models for each parameter:
+## - b: ~ 1, ~ mei, ~ occasion
+## - phi: ~ 1, ~ mei, ~ occasion
+## - p: ~ 1, ~ mei, ~ occasion
 
-plot(fit.full)
-captlist <- dampier.captlist
+## The object args is a list, where each component corresponds to a
+## model to fit, and it contains the required arguments of fit.popan()
+## for that model.
 args <- list()
 k <- 1
-for (group.b.i in 1:2){
-    for (group.phi.i in 1:2){
-        for (group.p.i in 1:2){
-            for (b.i in 1:6){
-                if (b.i == 1){
-                    b.mod <- ~ occasion
-                } else if (b.i == 2){
-                    b.mod <- ~ 1
-                } else if (b.i == 3){
-                    b.mod <- ~ mei
-                } else {
-                    b.mod <- as.formula(paste0("~ ", "lag", b.i - 3, ".mei"))
+for (group.b in 1:3){
+    ## Parameter grouping for recruitment.
+    if (group.b == 1){
+        gp.b <- FALSE
+        ge.b <- FALSE
+    } else if (group.b == 2){
+        gp.b <- TRUE
+        ge.b <- TRUE
+    } else if (group.b == 3){
+        gp.b <- TRUE
+        ge.b <- FALSE
+    }
+    for (group.phi in 1:3){
+        ## Parameter grouping for survival.
+        if (group.phi == 1){
+            gp.phi <- FALSE
+            ge.phi <- FALSE
+        } else if (group.phi == 2){
+            gp.phi <- TRUE
+            ge.phi <- TRUE
+        } else if (group.phi == 3){
+            gp.phi <- TRUE
+            ge.phi <- FALSE
+        }
+        for (group.p in 1:3){
+            ## Parameter grouping for detection.
+            if (group.p == 1){
+                gp.p <- FALSE
+                ge.p <- FALSE
+            } else if (group.p == 2){
+                gp.p <- TRUE
+                ge.p <- TRUE
+            } else if (group.p == 3){
+                gp.p <- TRUE
+                ge.p <- FALSE
+            }
+            for (model.b in 1:3){
+                ## Model statement for recruitment.
+                if (model.b == 1){
+                    m.b <- ~ 1
+                } else if (model.b == 2){
+                    m.b <- ~ mei
+                } else if (model.b == 3){
+                    m.b  <- ~ occasion
                 }
-                for (phi.i in 1:6){
-                    if (phi.i == 1){
-                        phi.mod <- ~ occasion
-                    } else if (phi.i == 2){
-                        phi.mod <- ~ 1
-                    } else if (phi.i == 3){
-                        phi.mod <- ~ mei
-                    } else {
-                        phi.mod <- as.formula(paste0("~ ", "lag", phi.i - 3, ".mei"))
+                for (model.phi in 1:3){
+                    ## Model statement for survival.
+                    if (model.phi == 1){
+                        m.phi <- ~ 1
+                    } else if (model.phi == 2){
+                        m.phi <- ~ mei
+                    } else if (model.phi == 3){
+                        m.phi  <- ~ occasion
                     }
-                    for (p.i in 1:11){
-                        if (p.i == 1){
-                            p.mod <- ~ occasion
-                        } else if (p.i == 2){
-                            p.mod <- ~ 1
-                        } else if (p.i == 3){
-                            p.mod <- ~ survey.eff
-                        } else {
-                            if (p.i == 4 | p.i == 5){
-                                p.mei.use <- "mei"
-                            } else {
-                                p.mei.use <- paste0("lag", floor((p.i - 4)/2), ".mei")
-                            }
-                            p.mod <- as.formula(paste0("~ ", p.mei.use, " + survey.eff"[(p.i %% 2) == 1]))
+                    for (model.p in 1:3){
+                        ## Model statement for detection.
+                        if (model.p == 1){
+                            m.p <- ~ 1
+                        } else if (model.p == 2){
+                            m.p <- ~ mei
+                        } else if (model.p == 3){
+                            m.p  <- ~ occasion
                         }
-                        args[[k]] <- list(caplist = captlist[1:2],
-                                          model.list = list(b = b.mod,
-                                                            phi = phi.mod,
-                                                            p = p.mod),
-                                          group.pars = list(b = TRUE,
-                                                            phi = TRUE,
-                                                            p = TRUE),
-                                          group.effect = list(b = group.b.i == 1,
-                                                              phi = group.phi.i == 1,
-                                                              p = group.p.i == 1),
+                        args[[k]] <- list(misool.captlist,
+                                          model.list = list(b = m.b,
+                                                            phi = m.phi,
+                                                            p = m.p),
+                                          group.pars = list(b = gp.b,
+                                                            phi = gp.phi,
+                                                            p = gp.p),
+                                          group.effect = list(b = ge.b,
+                                                              phi = ge.phi,
+                                                              p = ge.p),
                                           df = covs)
-                        k <- k + 1
+                        k <- k + 1        
                     }
                 }
             }
@@ -137,15 +166,8 @@ for (group.b.i in 1:2){
     }
 }
 
-## Fitting in 32-model batches.
-n.mods <- length(args)
-fits <- vector(mode = "list", length = n.mods)
-for (i in 1:((n.mods)/32)){
-    start <- 32*(i - 1) + 1
-    end <- 32*(i - 1) + 32
-    fits[start:end] <- par.fit.popan(3, arg.list = args[start:end])
-    cat(i, "of", (n.mods)/32, "\n")
-}
+
+fits <- par.fit.popan(3, arg.list = args)
 
 ## Print AICs of top-ten models.
 sort(sapply(fits, AIC))[1:10]
@@ -159,7 +181,7 @@ fits.AICs <- sapply(fits, AIC)
 ## year 7 to lower detection probability.
 m <- 1
 fit <- fits[[order(sapply(fits, AIC))[m]]]
-boot.popan(fit, 1000)
+fit.boot <- boot.popan(fit, 1000, n.cores = 3)
 plot(fit)
 AIC(fit)
 
