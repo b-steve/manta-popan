@@ -583,15 +583,15 @@ sim.popan <- function(fit){
     out <- popanGeneral.covs.sim.func(k, Nsvec, phiList, rhoList, pList)
 }
 
-boot.popan <- function(fit, n.boots = 100){
+boot.popan <- function(fit, n.boots = 100, n.cores = 1){
     boots <- vector(mode = "list", length = n.boots)
-    args <- fit$args
+    args.single <- fit$args
+    args.full <- vector(mode = "list", length = n.boots)
     for (i in 1:n.boots){
-        sim.data <- sim.popan(fit)
-        args$caplist <- sim.data
-        boots[[i]] <- do.call(fit.popan, args = args)
+        args.full[[i]] <- args.single
+        args.full[[i]]$caplist <- sim.popan(fit)
     }
-    fit$boots <- boots
+    fit$boots <- par.fit.popan(n.cores, arg.list = args.full)
     fit
 }
 
