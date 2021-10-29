@@ -364,6 +364,41 @@ cov.func <- function(formula, df, invlink = identity){
 }
 
 ## Function to fit a POPAN model.
+## Arguments:
+
+## caplist: A list with components for each group. Each component
+##          contains capture histories.
+## model.list: Model specifications for recruitment (b), survival
+##             (phi), and detection probability (p). The word
+##             "occasion" is reserved to indicate a separately
+##             estimate for each occasion is required. For example,
+##             model.list = list(b = ~ 1, phi = ~ x, p = ~ occasion)
+##             means that recruitment is assumed to be constant over
+##             time, survival depends on the covariate x, and
+##             detection probability is separately estimated for each
+##             occasion.
+## group.pars: A named list, where names are parameter names (b, phi,
+##             or p), and components are logical. If a component is
+##             TRUE, then that parameter is shared between groups. For
+##             example group.pars = list(b = FALSE, phi = FALSE, p =
+##             TRUE) means that recruitment and survival are
+##             separately estimated for each group, but detection
+##             probabilities are assumed to be the same between
+##             groups.
+## group.effect: A named list, where names are parameter names (b,
+##               phi, or p), and components are logical. If a
+##               component is TRUE, then a group effect is fitted. If
+##               FALSE, then parameters are separately estimated
+##               between groups. For example, say model.list includes
+##               the component p = ~ x, and group.pars includes
+##               component p = FALSE. If group.effect includes
+##               component p = TRUE, then the coefficient for
+##               covariate x is used for all groups, but group is also
+##               included as a categorical explanatory variable to
+##               determine detection probabilities. If FALSE, then
+##               the coefficent for x is separately estimated for each
+##               group.
+
 fit.popan <- function(caplist, model.list = NULL, group.pars = NULL, group.effect = NULL, df = NULL, printit = FALSE){
     ## Saving function arguments.
     args <- list(caplist = caplist, model.list = model.list,
