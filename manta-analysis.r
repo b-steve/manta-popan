@@ -1,7 +1,7 @@
 ## Sourcing model fitting functions.
 source("main.r")
 ## Reading in data.
-load("manta.RData")
+load("misool.dampier.caphist.RData")
 
 ## Need to create an overall goodness of fit function, to do something like this:
 ## misool.gof <- popan.gof(misool.captlist)
