@@ -1,7 +1,7 @@
 ## Function to fit a POPAN model.
 
 ## Arguments:
-## caplist: A list with components for each group. Each component
+## captlist: A list with components for each group. Each component
 ##          contains capture histories.
 ## model.list: Model specifications for recruitment (b), survival
 ##             (phi), and detection probability (p). The word
@@ -33,19 +33,19 @@
 ##               determine detection probabilities. If FALSE, then
 ##               the coefficent for x is separately estimated for each
 ##               group.
-fit.popan <- function(caplist, model.list = NULL, group.pars = NULL, group.effect = NULL, df = NULL, printit = FALSE){
+fit.popan <- function(captlist, model.list = NULL, group.pars = NULL, group.effect = NULL, df = NULL, printit = FALSE){
     ## Saving function arguments.
-    args <- list(caplist = caplist, model.list = model.list,
+    args <- list(captlist = captlist, model.list = model.list,
                  group.pars = group.pars, group.effect = group.effect,
                  df = df, printit = printit)
-    ## If caplist is a matrix, turn it into a list for consistency.
-    if (!is.list(caplist)){
-        caplist <- list(caplist)
+    ## If captlist is a matrix, turn it into a list for consistency.
+    if (!is.list(captlist)){
+        captlist <- list(captlist)
     }
     ## Number of different groups.
-    n.groups <- length(caplist)
+    n.groups <- length(captlist)
     ## Number of occasions (needs to be the same across groups).
-    k  <- ncol(caplist[[1]])
+    k  <- ncol(captlist[[1]])
     # Setting up data frame.
     if (is.null(df)){
         df <- data.frame(occasion = as.factor(1:k))
@@ -192,7 +192,7 @@ fit.popan <- function(caplist, model.list = NULL, group.pars = NULL, group.effec
     ## Putting together the start values.
     startvec <- c(Ns.startvec, b.startvec, phi.startvec, p.startvec)
     ## Fitting the model.
-    out <- popanGeneral.covs.fit.func(caplist, k = k, birthfunc = b.func, phifunc = phi.func,
+    out <- popanGeneral.covs.fit.func(captlist, k = k, birthfunc = b.func, phifunc = phi.func,
                                       pfunc = p.func, model = model, startvec = startvec,
                                       printit = printit)
     out$args <- args
@@ -233,7 +233,7 @@ boot.popan <- function(fit, n.boots = 100, n.cores = 1){
     args.full <- vector(mode = "list", length = n.boots)
     for (i in 1:n.boots){
         args.full[[i]] <- args.single
-        args.full[[i]]$caplist <- sim.popan(fit)
+        args.full[[i]]$captlist <- sim.popan(fit)
     }
     fit$boots <- par.fit.popan(n.cores, arg.list = args.full)
     fit
@@ -302,7 +302,7 @@ boot.ma.popan <- function(fits, n.boots = 10, chat = 1, n.cores = 1, progress.ba
                               ENs = ENs.weighted,
                               ENs.tot = apply(ENs.weighted, 1, sum))
     ## Getting original capture histories.
-    caplist <- fits[[1]]$args$caplist
+    captlist <- fits[[1]]$args$captlist
     ## Initialising args list.
     args.boot <- lapply(fits, function(x) x$args)
     ## Initialising output list.
@@ -314,16 +314,16 @@ boot.ma.popan <- function(fits, n.boots = 10, chat = 1, n.cores = 1, progress.ba
         pb <- txtProgressBar(min = 0, max = n.boots, style = 3)
     }
     for (i in 1:n.boots){
-        caplist.boot <- vector(mode = "list", length = length(caplist))
-        names(caplist.boot) <- names(caplist)
-        for (j in 1:length(caplist)){
+        captlist.boot <- vector(mode = "list", length = length(captlist))
+        names(captlist.boot) <- names(captlist)
+        for (j in 1:length(captlist)){
             ## Getting bootstrap sample of each group by sampling with
             ## replacement.
-            caplist.boot[[j]] <- caplist[[j]][sample(nrow(caplist[[j]]), replace = TRUE), ]
+            captlist.boot[[j]] <- captlist[[j]][sample(nrow(captlist[[j]]), replace = TRUE), ]
         }
         ## Putting the bootstrap data into the components of the args list.
         for (j in 1:n.fits){
-            args.boot[[j]]$caplist <- caplist.boot
+            args.boot[[j]]$captlist <- captlist.boot
         }
         ## Fitting each of the models to the bootstrapped data set.
         fits.boot <- par.fit.popan(n.cores = n.cores, arg.list = args.boot)
@@ -464,7 +464,7 @@ summary.ma.popan <- function(fit.ma, method = "weighted", pars = "ENs", diffs = 
 ## - Carries out a model averaging procedure using a bootstrap.
 
 ## Arguments:
-## caplist: A list with components for each group. Each component
+## captlist: A list with components for each group. Each component
 ##          contains capture histories.
 ## mei: The annual MEI values.
 ## n.boots: The number of bootstrap iterations.
