@@ -298,7 +298,7 @@ boot.ma.popan <- function(fits, n.boots = 10, chat = 1, n.cores = 1, progress.ba
     out.weighted.ests <- list(phis = phis.weighted,
                               rhos = rhos.weighted,
                               ps = ps.weighted,
-                              petns = pents.weighted,
+                              pents = pents.weighted,
                               ENs = ENs.weighted,
                               ENs.tot = apply(ENs.weighted, 1, sum))
     ## Getting original capture histories.
@@ -356,7 +356,7 @@ boot.ma.popan <- function(fits, n.boots = 10, chat = 1, n.cores = 1, progress.ba
         out.weighted[[i]] <- list(phis = phis.weighted.boot,
                                   rhos = rhos.weighted.boot,
                                   ps = ps.weighted.boot,
-                                  petns = pents.weighted.boot,
+                                  pents = pents.weighted.boot,
                                   ENs = ENs.weighted.boot,
                                   ENs.tot = apply(ENs.weighted.boot, 1, sum))
         ## Saving all the fits for weighted bootstrap.
@@ -390,44 +390,65 @@ boot.ma.popan <- function(fits, n.boots = 10, chat = 1, n.cores = 1, progress.ba
 ## pars: The annual parameters to summarise. Options include "ENs",
 ##       "ps", "rhos", or "phis". Alternatively, the user may specify
 ##       their own function of mparameters to summarise using par.fun
-## diffs: Logical. If TRUE, the parameters reported are differences.
+## diffs: Logical. If TRUE, the parameters reported are all pairwise
+##        differences between the requested parameters.
 ## par.fun: A function that computes a function of parameters to
 ##          summarise, with the primary input being the model object.
 ## par.fun.p: Logical. If TRUE, p-values are included to test the null
 ##            hypothesis that the true parameter value is equal to
 ##            zero. Defaults to FALSE because for many parameters it
 ##            is not meaningfull to test a null hypothesis of zero.
-summary.ma.popan <- function(fit.ma, method = "weighted", pars = "ENs", diffs = FALSE, par.fun = NULL, par.fun.p = FALSE){
+summary.ma.popan <- function(fit.ma, method = "best", pars = "ENs", groups = NULL, diffs = FALSE, par.fun = NULL, par.fun.p = FALSE){
+    ## Bundling up all the arguments.
+    args <- c(as.list(environment()))
+    ## Total number of groups.
+    n.groups <- ncol(fit.ma$best[[1]]$ENs)
+    ## If group argument not provided, then do both groups.
     if (is.null(par.fun)){
-        par.fun <- function(x) x[[pars]]
-    }
-    boots.par <- sapply(fit.ma[[method]], par.fun)
-    if (!is.matrix(boots.par)){
-        boots.par <- matrix(boots.par, nrow = 1)
-    }
-    if (diffs){
-        boots.par <- apply(boots.par, 2, function(x) outer(x, x, `-`))
-    }
-    if (method == "weighted"){
-        ests <- apply(boots.par, 1, mean)
-    } else if (method == "best"){
-        ests <- apply(boots.par, 1, mean)
+        par.fun <- function(x, group) x[[pars]][, group]
+        if (is.null(groups)){
+            groups <- 1:n.groups
+        }
     } else {
-        stop("Argument 'method' must be \"best\" or \"weighted\"")
+        groups <- NA
     }
-    ses <- apply(boots.par, 1, sd)
-    lower.ci <- apply(boots.par, 1, quantile, probs = 0.025)
-    upper.ci <- apply(boots.par, 1, quantile, probs = 0.975)
-    out <- matrix(0, nrow = length(ests), ncol = ifelse(diffs | par.fun.p, 5, 4))
-    if (diffs | par.fun.p){
-        ps <- apply(boots.par, 1, boot.p)
-        out[, 5] <- ps
+    ## Recursive function because why not.
+    if (length(groups) > 1){
+        out <- vector(mode = "list", length = length(groups))
+        names(out) <- paste0("group", groups)
+        for (i in seq_along(groups)){
+            args$groups <- groups[i]
+            out[[i]] <- do.call("summary", args)
+        }
+    } else {
+        boots.par <- sapply(fit.ma[[method]], par.fun, group = groups)
+        if (!is.matrix(boots.par)){
+            boots.par <- matrix(boots.par, nrow = 1)
+        }
+        if (diffs){
+            boots.par <- apply(boots.par, 2, function(x) outer(x, x, `-`))
+        }
+        if (method == "weighted"){
+            ests <- apply(boots.par, 1, mean)
+        } else if (method == "best"){
+            ests <- apply(boots.par, 1, mean)
+        } else {
+            stop("Argument 'method' must be \"best\" or \"weighted\"")
+        }
+        ses <- apply(boots.par, 1, sd)
+        lower.ci <- apply(boots.par, 1, quantile, probs = 0.025)
+        upper.ci <- apply(boots.par, 1, quantile, probs = 0.975)
+        out <- matrix(0, nrow = length(ests), ncol = ifelse(diffs | par.fun.p, 5, 4))
+        if (diffs | par.fun.p){
+            ps <- apply(boots.par, 1, boot.p)
+            out[, 5] <- ps
+        }
+        out[, 1] <- ests
+        out[, 2] <- ses
+        out[, 3] <- lower.ci
+        out[, 4] <- upper.ci
+        colnames(out) <- c("Estimate", "Std Error", "Lower CI", "Upper CI", "P-value"[diffs | par.fun.p])
     }
-    out[, 1] <- ests
-    out[, 2] <- ses
-    out[, 3] <- lower.ci
-    out[, 4] <- upper.ci
-    colnames(out) <- c("Estimate", "Std Error", "Lower CI", "Upper CI", "P-value"[diffs | par.fun.p])
     out
 }
 
@@ -608,12 +629,16 @@ manta.ma.wrap <- function(captlist, mei, chat = 1, n.boots = 100, AIC.cutoff = 1
 popan.gof <- function(captlist){
     n.groups <- length(captlist)
     ## Creating list to fill with test output.
-    out <- vector(mode = "list", length = n.groups)
-    ## Using captlist group names if they are available.
+    out <- vector(mode = "list", length = n.groups + 1)
     if (!is.null(names(captlist))){
-        names(out) <- names(captlist)
+        ## Using captlist group names if they are available.
+        names(out) <- c(names(captlist), "combined")
+    } else {
+        ## Otherwise just call them "group1", "group2", etc.
+        names(out) <- c(paste0("group", 1:n.groups), "combined")
     }
     for (i in 1:n.groups){
+        ## Carry out the four tests for each group.
         out[[i]] <- vector(mode = "list", length = 5)
         names(out[[i]]) <- c("test2cl", "test2ct", "test3sr", "test3sm", "overall")
         captlist.freq <- rep(1, nrow(captlist[[i]]))
@@ -623,6 +648,13 @@ popan.gof <- function(captlist){
         out[[i]][[4]] <- test3sm(captlist[[i]], captlist.freq)
         out[[i]][[5]] <- overall_CJS(captlist[[i]], captlist.freq)
     }
+    ## Combine the overall CJS test across all groups.
+    overall.chi2 <- sum(sapply(out[1:n.groups], function(x) x[[5]]$chi2))
+    overall.df <- sum(sapply(out[1:n.groups], function(x) x[[5]]$degree_of_freedom))
+    overall.p <- 1 - pchisq(overall.chi2, overall.df)
+    overall.chat <- overall.chi2/overall.df
+    out[[n.groups + 1]] <- data.frame(chi2 = overall.chi2, degree_of_freedom = overall.df,
+                                      p_value = overall.p, chat = overall.chat)
     out
 }
 
