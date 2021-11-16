@@ -600,6 +600,32 @@ manta.ma.wrap <- function(captlist, mei, chat = 1, n.boots = 100, AIC.cutoff = 1
     fit.ma
 }
 
+## Carrying out goodness-of-fit using R2ucare.
+##
+## Arguments:
+## captlist: A list with components for each group. Each component
+##          contains capture histories.
+popan.gof <- function(captlist){
+    n.groups <- length(captlist)
+    ## Creating list to fill with test output.
+    out <- vector(mode = "list", length = n.groups)
+    ## Using captlist group names if they are available.
+    if (!is.null(names(captlist))){
+        names(out) <- names(captlist)
+    }
+    for (i in 1:n.groups){
+        out[[i]] <- vector(mode = "list", length = 5)
+        names(out[[i]]) <- c("test2cl", "test2ct", "test3sr", "test3sm", "overall")
+        captlist.freq <- rep(1, nrow(captlist[[i]]))
+        out[[i]][[1]] <- test2cl(captlist[[i]], captlist.freq)
+        out[[i]][[2]] <- test2ct(captlist[[i]], captlist.freq)
+        out[[i]][[3]] <- test3sr(captlist[[i]], captlist.freq)
+        out[[i]][[4]] <- test3sm(captlist[[i]], captlist.freq)
+        out[[i]][[5]] <- overall_CJS(captlist[[i]], captlist.freq)
+    }
+    out
+}
+
 ## Some packages.
 library(mgcv)
 library(parallel)
