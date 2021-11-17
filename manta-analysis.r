@@ -1,16 +1,19 @@
 ## Sourcing model fitting functions.
 source("main.r")
+## Sourcing function to plot model fits
+source("popan.plot_func.R")
 ## Reading in data.
 load("misool.dampier.caphist.RData")
 
 ## Need to create an overall goodness of fit function, to do something like this:
 misool.gof <- popan.gof(misool.captlist)
 dampier.gof <- popan.gof(dampier.captlist)
-## Getting the overall c-hat for Dampier.
+## Getting the overall c-hat for Dampier and Misool
 dampier.chat <- dampier.gof$combined$chat
+misool.chat <- misool.gof$combined$chat
 
 ## Doing everything for the misool analysis.
-misool.ma.fit <- manta.ma.wrap(misool.captlist, mei = covs$mei, chat = 1,
+misool.ma.fit <- manta.ma.wrap(misool.captlist, mei = covs$mei, chat = misool.chat,
                                n.boot = 100, AIC.cutoff = 10, n.cores = 3)
 ## Need something like this for Dampier, noting we need the chat for Dampier.
 dampier.ma.fit <- manta.ma.wrap(misool.captlist, mei = covs$mei, chat = dampier.chat,
@@ -19,10 +22,12 @@ dampier.ma.fit <- manta.ma.wrap(misool.captlist, mei = covs$mei, chat = dampier.
 load("test-fits.RData")
 
 ## Need something cool to happen when you do this:
-## plot(misool.fit)
+## plotting Misool data
+popan.plot(misool.ma.fit, year.start = 2009, year.end = 2019, n.start = 1, n.end = 11)
+## plotting Dampier data
+popan.plot(dampier.ma.fit, year.start = 2009, year.end = 2019, n.start = 1, n.end = 11)
 
 ## A few examples of how to use the summary() function.
-
 ## Option 1: Provide a pars argument, either "ENs", "phis", "rhos",
 ## "ps", or "pents". Results are per-occasion, separated into the
 ## different groups.
