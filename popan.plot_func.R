@@ -1,5 +1,4 @@
-popan.plot <- function(fit.ma, year.start = 2009, year.end = 2019, 
-                       n.start = 1, n.end = 11) {
+popan.plot <- function(fit.ma, year.start = 2009, year.end = 2019) {
 
   ## Extracting parameter values from the model fit
   # ENs female + male
@@ -21,6 +20,10 @@ popan.plot <- function(fit.ma, year.start = 2009, year.end = 2019,
   # rhos male
   rho.m <- summary(fit.ma, pars = "rhos", groups = 2)
   
+  n.start <- (year.start-2009)+1
+  n.end <- (year.end-2009)+1
+  max.seq <- (n.end-n.start)+1
+  
   ## PLOTTING ####
   par(mfrow=c(3,2)) # dividing plots into 6 panels (row, col)
   par(mar = c(3,3,2,1)) # adjust graph margin: below, left, top, right
@@ -28,7 +31,7 @@ popan.plot <- function(fit.ma, year.start = 2009, year.end = 2019,
   
   ## PANEL A = ENs for total population (female+male) and for females only ####
   # total population (female+male)
-  plot(EN.mf[, 1],
+  plot(EN.mf[n.start:n.end, 1],
        col = "orangered2",
        ylim = c(0, max(EN.mf[, 4])),
        type = "b", 
@@ -42,16 +45,16 @@ popan.plot <- function(fit.ma, year.start = 2009, year.end = 2019,
        cex = 1.6, # size of symbols
        tck=-.015, # size of ticks in axis
        cex.lab = 1.6) # size of axis title
-  axis(1, at = seq(1,11, by = 1), cex.axis=1.2,
+  axis(1, at = seq(1,max.seq, by = 1), cex.axis=1.2,
        labels = c(year.start:year.end), tck=-.015)
   ## Adding dotted line for lower and upper CI limits
-  lines(EN.mf[, 3], lty = "longdash", col = "orangered2")
-  lines(EN.mf[, 4], lty = "longdash", col = "orangered2")
+  lines(EN.mf[n.start:n.end, 3], lty = "longdash", col = "orangered2")
+  lines(EN.mf[n.start:n.end, 4], lty = "longdash", col = "orangered2")
   
   par(new = T)
   
   # plotting female
-  plot(EN.f[, 1], 
+  plot(EN.f[n.start:n.end, 1], 
        col = "goldenrod1",
        ylim = c(0, max(EN.mf[, 4])),
        type = "b", 
@@ -67,8 +70,8 @@ popan.plot <- function(fit.ma, year.start = 2009, year.end = 2019,
        tck=-.015,
        cex.lab = 1.6)
   ## Adding dotted line for lower and upper CI limits
-  lines(EN.f[, 3], lty = "dashed", col = "goldenrod1")
-  lines(EN.f[, 4], lty = "dashed", col = "goldenrod1")
+  lines(EN.f[n.start:n.end, 3], lty = "dashed", col = "goldenrod1")
+  lines(EN.f[n.start:n.end, 4], lty = "dashed", col = "goldenrod1")
   
   # create legend for Panel A
   legend("topleft", legend= c("Females + Males", "Females"), col = c('orangered2', 'goldenrod1'),
@@ -81,7 +84,7 @@ popan.plot <- function(fit.ma, year.start = 2009, year.end = 2019,
   
   ## PANEL B = ENs for total population (female+male) and for females only ####
   # total population (female+male)
-  plot(EN.mf[, 1],
+  plot(EN.mf[n.start:n.end, 1],
        col = "orangered2",
        ylim = c(0, max(EN.mf[, 4])),
        type = "b", 
@@ -95,16 +98,16 @@ popan.plot <- function(fit.ma, year.start = 2009, year.end = 2019,
        cex = 1.6,
        tck=-.015,
        cex.lab = 1.6)
-  axis(1, at = seq(1,11, by = 1), cex.axis=1.2,
+  axis(1, at = seq(1,max.seq, by = 1), cex.axis=1.2,
        labels = c(year.start:year.end), tck=-.015)
   ## Adding dotted line for lower and upper CI limits
-  lines(EN.mf[, 3], lty = "longdash", col = "orangered2")
-  lines(EN.mf[, 4], lty = "longdash", col = "orangered2")
+  lines(EN.mf[n.start:n.end, 3], lty = "longdash", col = "orangered2")
+  lines(EN.mf[n.start:n.end, 4], lty = "longdash", col = "orangered2")
   
   par(new = T)
   
   # plotting male
-  plot(EN.m[, 1], 
+  plot(EN.m[n.start:n.end, 1], 
        col = "turquoise3",
        ylim = c(0, max(EN.mf[, 4])),
        type = "b", 
@@ -120,8 +123,8 @@ popan.plot <- function(fit.ma, year.start = 2009, year.end = 2019,
        tck=-.015,
        cex.lab = 1.6)
   ## Adding dotted line for lower and upper CI limits
-  lines(EN.m[, 3], lty = "dashed", col = "turquoise3")
-  lines(EN.m[, 4], lty = "dashed", col = "turquoise3")
+  lines(EN.m[n.start:n.end, 3], lty = "dashed", col = "turquoise3")
+  lines(EN.m[n.start:n.end, 4], lty = "dashed", col = "turquoise3")
   
   # create legend for Panel B
   legend("topleft", legend= c("Females + Males", "Males"), col = c('orangered2', 'turquoise3'),
@@ -133,7 +136,7 @@ popan.plot <- function(fit.ma, year.start = 2009, year.end = 2019,
   box()
   
   ## PANEL C = sighting probability (p) for female ####
-  plot(p.f[, 1],
+  plot(p.f[n.start:n.end, 1],
        col = "goldenrod1",
        ylim = c(0, max(p.f[, 4])),
        type = "b", 
@@ -147,11 +150,11 @@ popan.plot <- function(fit.ma, year.start = 2009, year.end = 2019,
        cex = 1.6,
        tck=-.015,
        cex.lab = 1.6)
-  axis(1, at = seq(1,11, by = 1), cex.axis=1.2,
+  axis(1, at = seq(1,max.seq, by = 1), cex.axis=1.2,
        labels = c(year.start:year.end), tck=-.015)
   ## Adding dotted line for lower and upper CI limits
-  lines(p.f[, 3], lty = "longdash", col = "goldenrod1")
-  lines(p.f[, 4], lty = "longdash", col = "goldenrod1")
+  lines(p.f[n.start:n.end, 3], lty = "longdash", col = "goldenrod1")
+  lines(p.f[n.start:n.end, 4], lty = "longdash", col = "goldenrod1")
   
   # create legend for Panel C
   legend("topleft", legend= "Females", col = "goldenrod1",
@@ -163,7 +166,7 @@ popan.plot <- function(fit.ma, year.start = 2009, year.end = 2019,
   box()
   
   ## PANEL D = sighting probability (p) for male ####
-  plot(p.m[, 1],
+  plot(p.m[n.start:n.end, 1],
        col = "turquoise3",
        ylim = c(0, max(p.f[, 4])),
        type = "b", 
@@ -177,11 +180,11 @@ popan.plot <- function(fit.ma, year.start = 2009, year.end = 2019,
        cex = 1.6,
        tck=-.015,
        cex.lab = 1.6)
-  axis(1, at = seq(1,11, by = 1), cex.axis=1.2,
+  axis(1, at = seq(1,max.seq, by = 1), cex.axis=1.2,
        labels = c(year.start:year.end), tck=-.015)
   ## Adding dotted line for lower and upper CI limits
-  lines(p.m[, 3], lty = "longdash", col = "turquoise3")
-  lines(p.m[, 4], lty = "longdash", col = "turquoise3")
+  lines(p.m[n.start:n.end, 3], lty = "longdash", col = "turquoise3")
+  lines(p.m[n.start:n.end, 4], lty = "longdash", col = "turquoise3")
   
   # create legend for Panel C
   legend("topleft", legend= "Males", col = "turquoise3",
@@ -199,7 +202,7 @@ popan.plot <- function(fit.ma, year.start = 2009, year.end = 2019,
   phi.f.full <- rbind(phi.f, last.row)
   ## Creating a line for point estimates. The y-axis goes from 0 to the
   ## highest upper CI limit.
-  plot(phi.f.full[, 1], 
+  plot(phi.f.full[n.start:n.end, 1], 
        col = "goldenrod1",
        ylim = c(0, 1),
        type = "b", 
@@ -212,16 +215,18 @@ popan.plot <- function(fit.ma, year.start = 2009, year.end = 2019,
        cex.axis = 1.2,
        cex = 1.6,
        cex.lab = 1.6)
-  axis(1, at = seq(1,11, by = 1), cex.axis=1.2, labels = c(year.start:year.end))
+  axis(1, at = seq(1,max.seq, by = 1), cex.axis=1.2,
+       labels = c(year.start:year.end), tck=-.015)
+  
   ## Adding dotted line for lower and upper CI limits
-  lines(phi.f.full[, 3], lty = "dashed", col = "goldenrod1")
-  lines(phi.f.full[, 4], lty = "dashed", col = "goldenrod1")
+  lines(phi.f.full[n.start:n.end, 3], lty = "dashed", col = "goldenrod1")
+  lines(phi.f.full[n.start:n.end, 4], lty = "dashed", col = "goldenrod1")
   
   par(new = T)
   
   # phis for males
   phi.m.full <- rbind(phi.m, last.row)
-  plot(phi.m.full[, 1],
+  plot(phi.m.full[n.start:n.end, 1],
        col = "turquoise3",
        ylim = c(0, 1),
        type = "b", 
@@ -231,8 +236,8 @@ popan.plot <- function(fit.ma, year.start = 2009, year.end = 2019,
        xaxt="n",
        cex = 1.6,
        yaxt="n")
-  lines(phi.m.full[, 3], lty = "dotted", col = "turquoise3")
-  lines(phi.m.full[, 4], lty = "dotted", col = "turquoise3")
+  lines(phi.m.full[n.start:n.end, 3], lty = "dotted", col = "turquoise3")
+  lines(phi.m.full[n.start:n.end, 4], lty = "dotted", col = "turquoise3")
   
   # create legend for Panel E
   legend("bottomleft", legend= c("Females", "Males"), col = c("goldenrod1", "turquoise3"),
@@ -251,7 +256,7 @@ popan.plot <- function(fit.ma, year.start = 2009, year.end = 2019,
   rho.f.full <- rbind(rho.f, last.row)
   ## Creating a line for point estimates. The y-axis goes from 0 to the
   ## highest upper CI limit.
-  plot(rho.f.full[, 1], 
+  plot(rho.f.full[n.start:n.end, 1], 
        col = "goldenrod1",
        ylim = c(0, 1),
        type = "b", 
@@ -264,16 +269,17 @@ popan.plot <- function(fit.ma, year.start = 2009, year.end = 2019,
        cex.axis = 1.2,
        cex = 1.6,
        cex.lab = 1.6)
-  axis(1, at = seq(1,11, by = 1), cex.axis=1.2, labels = c(year.start:year.end))
+  axis(1, at = seq(1,max.seq, by = 1), cex.axis=1.2,
+       labels = c(year.start:year.end), tck=-.015)
   ## Adding dotted line for lower and upper CI limits
-  lines(rho.f.full[, 3], lty = "dashed", col = "goldenrod1")
-  lines(rho.f.full[, 4], lty = "dashed", col = "goldenrod1")
+  lines(rho.f.full[n.start:n.end, 3], lty = "dashed", col = "goldenrod1")
+  lines(rho.f.full[n.start:n.end, 4], lty = "dashed", col = "goldenrod1")
   
   par(new = T)
   
   # rhos for males
   rho.m.full <- rbind(rho.m, last.row)
-  plot(rho.m.full[, 1],
+  plot(rho.m.full[n.start:n.end, 1],
        col = "turquoise3",
        ylim = c(0, 1),
        type = "b", 
@@ -283,8 +289,8 @@ popan.plot <- function(fit.ma, year.start = 2009, year.end = 2019,
        xaxt="n",
        cex = 1.6,
        yaxt="n")
-  lines(rho.m.full[, 3], lty = "dotted", col = "turquoise3")
-  lines(rho.m.full[, 4], lty = "dotted", col = "turquoise3")
+  lines(rho.m.full[n.start:n.end, 3], lty = "dotted", col = "turquoise3")
+  lines(rho.m.full[n.start:n.end, 4], lty = "dotted", col = "turquoise3")
   
   # create legend for Panel F
   legend("topleft", legend= c("Females", "Males"), col = c("goldenrod1", "turquoise3"),
