@@ -23,9 +23,9 @@ load("test-fits.RData")
 
 ## Need something cool to happen when you do this:
 ## plotting Misool data
-popan.plot(misool.ma.fit, year.start = 2009, year.end = 2019, n.start = 1, n.end = 11)
+popan.plot(misool.ma.fit, year.start = 2009, year.end = 2019)
 ## plotting Dampier data
-popan.plot(dampier.ma.fit, year.start = 2009, year.end = 2019, n.start = 1, n.end = 11)
+popan.plot(dampier.ma.fit, year.start = 2009, year.end = 2019)
 
 ## A few examples of how to use the summary() function.
 ## Option 1: Provide a pars argument, either "ENs", "phis", "rhos",
