@@ -1,7 +1,5 @@
 ## Sourcing model fitting functions.
 source("main.r")
-## Sourcing function to plot model fits
-source("popan.plot_func.R")
 ## Reading in data.
 load("misool.dampier.caphist.RData")
 
@@ -11,6 +9,15 @@ dampier.gof <- popan.gof(dampier.captlist)
 ## Getting the overall c-hat for Dampier and Misool
 dampier.chat <- dampier.gof$combined$chat
 misool.chat <- misool.gof$combined$chat
+## You can inspect different tests like this. The tests are called
+## "test2cl", "test2ct", "test3sr", and "test3sm".
+## TEST2CL for group 1.
+misool.gof[[1]]$test2cl
+## TEST3SR for group 2.
+misool.gof[[2]]$test3sr
+## You can get M-arrays for each group like this:
+misool.gof[[1]]$marray
+
 
 ## Doing everything for the misool analysis.
 misool.ma.fit <- manta.ma.wrap(misool.captlist, mei = covs$mei, chat = misool.chat,
