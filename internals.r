@@ -859,15 +859,6 @@ plot.popan <- function(object, ...){
     title(main = "ENs")
 }
 
-AIC.popan <- function(object, chat = 1, ...){
-    ## Log-likleihood.
-    ll <- -object$fit$objective
-    ## Number of paramters.
-    k <- length(object$fit$par)
-    ## AIC.
-    -2*ll/chat + 2*k
-}
-
 ##############################################################
 
 popanGeneral.wrap <- function(Nsim=100, k=11,  # k=number of capture occasions

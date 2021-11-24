@@ -221,6 +221,20 @@ sim.popan <- function(fit){
     out <- popanGeneral.covs.sim.func(k, Nsvec, phiList, rhoList, pList)
 }
 
+## Function to calculate the (Q)AIC for a POPAN model fit.
+
+## Arguments:
+## fit: A model object returned by fit.popan().
+## chat: An estimate of c-hat for QAIC.
+AIC.popan <- function(object, chat = 1, ...){
+    ## Log-likleihood.
+    ll <- -object$fit$objective
+    ## Number of paramters.
+    k <- length(object$fit$par)
+    ## AIC.
+    -2*ll/chat + 2*k
+}
+
 ## Function to carry out a parametric bootstrap.
 
 ## Arguments:
