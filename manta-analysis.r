@@ -35,14 +35,61 @@ misool.ma.fit <- misool.wrap.out$fit.ma
 sapply(misool.best.fits, AIC)
 ## AIC for one specific model fit.
 AIC(misool.best.fits[[2]])
-## To see the arguments used for a specific fit.
-misool.best.fits[[2]]$args
+
+## To see the arguments used for a specific fit you can look at the
+## args component. In particular, here is the model.list component for
+## one of them.
+
+## Here's how you figure out how sex was included in the model:
+
+## (1) If group.pars is TRUE then the coefficients for the parameter
+## in model.list are shared ("grouped" across the sexes, otherwise we
+## separately estimate the effects of the covariates in model.list for
+## each sex.
+## (2) If group.effect is TRUE, then we fit a main effect of sex. Note
+## that it doesn't make sense to fit both a main effect (group.effect
+## = TRUE) and also separately estimate the coefficients (group.pars =
+## FALSE), so there are only three options:
+## - group.pars is TRUE and group.effect is FALSE. This means males
+##   and females have the same parameter values across all years.
+## - group.pars is TRUE and group.effect is TRUE. This means the
+##   effects of the covariates in model.list are the same for both
+##   sexes, but we additionally estimate a parameter allowing a
+##   constant difference across years (on the link scale) between
+##   sexes.
+## - group.pars is FALSE and group.effect is FALSE. This means we
+##   separately fit the covariates for both sexes, so that the
+##   relationship one covariate has for females might be quite
+##   different than the relationship it has with males.
+
+## Here's an example:
+misool.best.fits[[2]]$args$model.list
+## So we use MEI to model recruitment and survival, and have separate
+## estimates per occasion for detection probabilities.
+misool.best.fits[[2]]$args$group.pars
+misool.best.fits[[2]]$args$group.effect
 
 ## Need something cool to happen when you do this:
 ## plotting Misool data
 popan.plot(misool.ma.fit, year.start = 2009, year.end = 2019)
 ## plotting Dampier data
 popan.plot(dampier.ma.fit, year.start = 2009, year.end = 2019)
+## So we have:
+## - Separate estimation of recruitment parameters for
+##   different sexes.
+## - Separate estimation of survival parameters for
+##   differet sexes.
+## - The detection probabilities are assumed to be the same for both
+##   sexes.
+
+## Using the shorthand notation in the paper, this model is:
+## - psi(MEI*sex)phi(mei*sex)p(t).
+
+## Makes sense when we plot it:
+plot(misool.best.fits[[2]])
+## - Survival and recruitment estimates have very different patterns
+##   for recruitment and survival, but the pattern aligns with MEI.
+## - Detection probabilities are the same for both sexes.
 
 ## A few examples of how to use the summary() function.
 ## Option 1: Provide a pars argument, either "ENs", "phis", "rhos",
