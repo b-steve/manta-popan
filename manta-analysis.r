@@ -20,13 +20,23 @@ misool.gof[[1]]$marray
 
 
 ## Doing everything for the misool analysis.
-misool.ma.fit <- manta.ma.wrap(misool.captlist, mei = covs$mei, chat = misool.chat,
-                               n.boot = 100, AIC.cutoff = 10, n.cores = 3)
-## Need something like this for Dampier, noting we need the chat for Dampier.
-dampier.ma.fit <- manta.ma.wrap(misool.captlist, mei = covs$mei, chat = dampier.chat,
-                                n.boot = 100, AIC.cutoff = 10, n.cores = 3)
+misool.wrap.out <- manta.ma.wrap(misool.captlist, mei = covs$mei, chat = misool.chat,
+                                 n.boot = 5, AIC.cutoff = 10, n.cores = 3)
+misool.best.fits <- misool.wrap.out$best.fits
+misool.ma.fit <- misool.wrap.out$fit.ma
 
-load("test-fits.RData")
+## Need something like this for Dampier, noting we need the chat for Dampier.
+dampier.wrap.out <- manta.ma.wrap(misool.captlist, mei = covs$mei, chat = dampier.chat,
+                                  n.boot = 100, AIC.cutoff = 10, n.cores = 3)
+misool.best.fits <- misool.wrap.out$best.fits
+misool.ma.fit <- misool.wrap.out$fit.ma
+
+## AICs for the best Misool fits.
+sapply(misool.best.fits, AIC)
+## AIC for one specific model fit.
+AIC(misool.best.fits[[2]])
+## To see the arguments used for a specific fit.
+misool.best.fits[[2]]$args
 
 ## Need something cool to happen when you do this:
 ## plotting Misool data

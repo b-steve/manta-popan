@@ -632,7 +632,7 @@ manta.ma.wrap <- function(captlist, mei, chat = 1, n.boots = 100, AIC.cutoff = 1
     fit.ma <- boot.ma.popan(best.fits, n.boots = n.boots, chat = chat,
                             n.cores = n.cores, progress.bar = verbose)
     ## Returning object as output.
-    fit.ma
+    list(best.fits = best.fits, fit.ma = fit.ma)
 }
 
 ## Carrying out goodness-of-fit using R2ucare.
