@@ -189,7 +189,7 @@ fit.popan <- function(captlist, model.list = NULL, group.pars = NULL, group.effe
     ## Creating model object.
     model <- list()
     for (i in 1:n.groups){
-        model[[i]] <- c("Ns.1", b.par.names[[1]], phi.par.names[[1]], p.par.names[[1]])
+        model[[i]] <- c(paste0("Ns.", i), b.par.names[[i]], phi.par.names[[i]], p.par.names[[i]])
     }
     names(model) <- paste0("gp", 1:n.groups)
     ## Putting together the start values.
