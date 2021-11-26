@@ -187,8 +187,11 @@ fit.popan <- function(captlist, model.list = NULL, group.pars = NULL, group.effe
     ## Start values for the N parameters.
     Ns.startvec <- c(Ns.1 = 1000, Ns.2 = 1200)
     ## Creating model object.
-    model <- list(gp1 = c("Ns.1", b.par.names[[1]], phi.par.names[[1]], p.par.names[[1]]),
-                  gp2 = c("Ns.2", b.par.names[[2]], phi.par.names[[2]], p.par.names[[2]]))
+    model <- list()
+    for (i in 1:n.groups){
+        model[[i]] <- c("Ns.1", b.par.names[[1]], phi.par.names[[1]], p.par.names[[1]])
+    }
+    names(model) <- paste0("gp", 1:n.groups)
     ## Putting together the start values.
     startvec <- c(Ns.startvec, b.startvec, phi.startvec, p.startvec)
     ## Fitting the model.
