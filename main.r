@@ -141,6 +141,49 @@ fit.popan <- function(captlist, model.list = NULL, group.pars = NULL, group.effe
     ## Start values for phi parameters.
     phi.startvec <- numeric(sum(sapply(phi.par.names, length)))
     names(phi.startvec) <- c(phi.par.names, recursive = TRUE)
+    
+    ## Doing all the same stuff with ptr.
+    ## Model for survival parameters.
+    ptr.model <- model.list[["ptr"]]
+    if (is.null(ptr.model)){
+        ptr.model <- ~ occasion
+    }
+    ## Creating a function to model detection probability parameters.
+    ptr.obj <- cov.func(ptr.model, df, plogis)
+    ## The function.
+    ptr.func <- ptr.obj[[1]]
+    ## Number of parameters.
+    n.ptr.par <- ptr.obj[[2]]
+    ## Setting defaults so Rachel's function knows how many parameters there are.
+    formals(ptr.func)$pars <- rep(0, n.ptr.par)
+    ## Parameter names for the groups.
+    ptr.par.names <- vector(mode = "list", length = n.groups)
+    ## Logical value for whether or not to share p parameters across groups.
+    ptr.group <- group.pars[["ptr"]]
+    if (is.null(ptr.group)){
+        ptr.group <- TRUE
+    }
+    for (i in 1:n.groups){
+        ptr.par.names[[i]] <- paste0("ptr", 1:n.ptr.par, ".", ifelse(ptr.group, 1, i))
+    }
+    ## Logical value for whether or not to put a group effect on ptr.
+    ptr.effect <- group.effect[["ptr"]]
+    if (is.null(ptr.effect)){
+        ptr.effect <- FALSE
+    }
+    ## Error if we have both effect and not grouping.
+    if (!ptr.group & ptr.effect){
+        stop("You can't fit a group effect on parameter ptr if effects are not grouped.")
+    }
+    ## Put an additive group effect.
+    if (group.effect[["ptr"]]){
+        n.ptr.par <- n.ptr.par + 1
+        ptr.par.names[[2]][1] <- "ptr1.2"
+    }
+    ## Start values for p parameters.
+    ptr.startvec <- numeric(sum(sapply(ptr.par.names, length)))
+    names(ptr.startvec) <- c(ptr.par.names, recursive = TRUE)
+    ptr.startvec[(substr(names(ptr.startvec), 1, 2) == "ptr1")] <- qlogis(0.1)
 
     ## Doing all the same stuff with p.
     ## Model for survival parameters.
@@ -148,7 +191,7 @@ fit.popan <- function(captlist, model.list = NULL, group.pars = NULL, group.effe
     if (is.null(p.model)){
         p.model <- ~ occasion
     }
-    ## Creating a function to model survival parameters.
+    ## Creating a function to model detection probability parameters.
     p.obj <- cov.func(p.model, df, plogis)
     ## The function.
     p.func <- p.obj[[1]]
@@ -184,20 +227,21 @@ fit.popan <- function(captlist, model.list = NULL, group.pars = NULL, group.effe
     p.startvec <- numeric(sum(sapply(p.par.names, length)))
     names(p.startvec) <- c(p.par.names, recursive = TRUE)
     p.startvec[(substr(names(p.startvec), 1, 2) == "p1")] <- qlogis(0.1)
+    
     ## Start values for the N parameters.
     Ns.startvec <- c(Ns.1 = 1000, Ns.2 = 1200)
     ## Creating model object.
     model <- list()
     for (i in 1:n.groups){
-        model[[i]] <- c(paste0("Ns.", i), b.par.names[[i]], phi.par.names[[i]], p.par.names[[i]])
+        model[[i]] <- c(paste0("Ns.", i), b.par.names[[i]], phi.par.names[[i]], p.par.names[[i]], ptr.par.names[[i]])
     }
     names(model) <- paste0("gp", 1:n.groups)
     ## Putting together the start values.
-    startvec <- c(Ns.startvec, b.startvec, phi.startvec, p.startvec)
+    startvec <- c(Ns.startvec, b.startvec, phi.startvec, p.startvec, ptr.startvec)
     ## Fitting the model.
     out <- popanGeneral.covs.fit.func(captlist, k = k, birthfunc = b.func, phifunc = phi.func,
-                                      pfunc = p.func, model = model, startvec = startvec,
-                                      printit = printit)
+                                      pfunc = p.func, ptrfunc = ptr.func, model = model,
+                                      startvec = startvec, printit = printit)
     out$args <- args
     out
 }

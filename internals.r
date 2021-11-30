@@ -900,22 +900,23 @@ popanGeneral.wrap <- function(Nsim=100, k=11,  # k=number of capture occasions
 
 
 popanGeneral.covs.fit.func <- function(dat, k=ncol(dat[[1]]), birthfunc = immigrationElNino.func, phifunc, pfunc,
-                                  model=list(
-                                      gp1=c("Ns.1", "b1.1", "b2.1", rep("phi1.1", k-1), paste0("p", 1:k, ".1")),
-                                      gp2=c("Ns.2", "b1.1", "b2.1", rep("phi1.1", k-1), paste0("p", 1:k, ".2"))),
-                                  ## Note: parameters must be entered into model in the order Ns, b, phi, p within each group.
-                                  ## The default model above allows different group sizes, time-varying capture probabilities
-                                  ## that differ by group, a single phi for all times and both groups, and a common per-capita
-                                  ## birth rate within each group. The parameter naming convention is occasion.group,
-                                  ## e.g. phi5.1 is the phi for occasion 5 in group 1.
-                                  ##
-                                  ## startvec is a named vector: it needs all the entries specified in model, but in any order.
-                                  ## If startvec includes parameters that aren't needed for the specified model, they are ignored.
-                                  startvec=c(Ns.1=950, Ns.2=1150, b1.1=0.15, b2.1=0.1, phi1.1=0.93,
-                                             structure(rep(0.45, k), .Names=paste0("p", 1:k, ".1")),  ## start p's for group 1
-                                             structure(rep(0.45, k), .Names=paste0("p", 1:k, ".2"))),  ## start p's for group 2
-                                  printit=FALSE){
-
+                                       ptrfunc,
+                                       model=list(
+                                           gp1=c("Ns.1", "b1.1", "b2.1", rep("phi1.1", k-1), paste0("p", 1:k, ".1")),
+                                           gp2=c("Ns.2", "b1.1", "b2.1", rep("phi1.1", k-1), paste0("p", 1:k, ".2"))),
+                                       ## Note: parameters must be entered into model in the order Ns, b, phi, p within each group.
+                                       ## The default model above allows different group sizes, time-varying capture probabilities
+                                       ## that differ by group, a single phi for all times and both groups, and a common per-capita
+                                       ## birth rate within each group. The parameter naming convention is occasion.group,
+                                       ## e.g. phi5.1 is the phi for occasion 5 in group 1.
+                                       ##
+                                       ## startvec is a named vector: it needs all the entries specified in model, but in any order.
+                                       ## If startvec includes parameters that aren't needed for the specified model, they are ignored.
+                                       startvec=c(Ns.1=950, Ns.2=1150, b1.1=0.15, b2.1=0.1, phi1.1=0.93,
+                                                  structure(rep(0.45, k), .Names=paste0("p", 1:k, ".1")),  ## start p's for group 1
+                                                  structure(rep(0.45, k), .Names=paste0("p", 1:k, ".2"))),  ## start p's for group 2
+                                       printit=FALSE){
+    
     ## popanGeneral.fit.func
     ## Fit the POPAN-general model for multiple groups (e.g. males and females).
     ## The birth-curve is input through a function birthfunc that can take covariates. There can be any number
@@ -965,7 +966,9 @@ popanGeneral.covs.fit.func <- function(dat, k=ncol(dat[[1]]), birthfunc = immigr
     nbpar <- length(eval(formals(birthfunc)[[1]]))
     nphipar <- length(eval(formals(phifunc)[[1]]))
     nppar <- length(eval(formals(pfunc)[[1]]))
-    parnamesTemplate <- c("Ns", paste0("b", 1:nbpar), paste0("phi", 1:nphipar), paste0("p", 1:nppar))
+    nptrpar <- length(eval(formals(ptrfunc)[[1]]))
+    parnamesTemplate <- c("Ns", paste0("b", 1:nbpar), paste0("phi", 1:nphipar),
+                          paste0("p", 1:nppar), paste0("ptr", 1:nptrpar))
     allparnames <- unlist(lapply(1:ngp, function(gp) paste(parnamesTemplate, gp, sep=".")))
 
     ## The actual parameters to be estimated are those in unlist(model[1:ngp]).
@@ -1007,6 +1010,7 @@ popanGeneral.covs.fit.func <- function(dat, k=ncol(dat[[1]]), birthfunc = immigr
     lowervec[grep("b", parsEstvec)] <- -Inf
     lowervec[grep("phi", parsEstvec)] <- -Inf
     lowervec[grep("p", parsEstvec)] <- -Inf
+    lowervec[grep("ptr", parsEstvec)] <- -Inf
     ## For the Ns parameters, insert lower limit which is the maximum of nhist for all the groups that
     ## possess that parameter.  For example if Ns.1=Ns.2 in the model, then the constraint for Ns.1
     ## is that it must be greater than both nhistList[[1]] and nhistList[[2]].
@@ -1023,6 +1027,7 @@ popanGeneral.covs.fit.func <- function(dat, k=ncol(dat[[1]]), birthfunc = immigr
     uppervec[grep("b", parsEstvec)] <- Inf
     uppervec[grep("phi", parsEstvec)] <- Inf
     uppervec[grep("p", parsEstvec)] <- Inf
+    uppervec[grep("ptr", parsEstvec)] <- Inf
     ## -----------------------------------------------------------------------------------------------------
     ## Negative log likelihood function:
     ## -----------------------------------------------------------------------------------------------------
@@ -1039,14 +1044,15 @@ popanGeneral.covs.fit.func <- function(dat, k=ncol(dat[[1]]), birthfunc = immigr
             bpars <- allpars[paste0("b", 1:nbpar, ".", gp)]  ## nbpars of these
             phipars <- allpars[paste0("phi", 1:nphipar, ".", gp)]  ## nphipar of these
             ppars <- allpars[paste0("p", 1:nppar, ".", gp)]  ## nppar of these
-
+            ptrpars <- allpars[paste0("ptr", 1:nppar, ".", gp)]
             ## Use the birthfunc supplied to convert bpars into rhovec:
             rhovec <- birthfunc(bpars)
             ## Use phifunc supplied to convert phipars into phivec.
             phivec <- phifunc(phipars)
             ## Use phifunc supplied to convert phipars into phivec.
             pvec <- pfunc(ppars)
-            
+            ## Use ptrfunc supplied to convert ptrpars to ptrvec.
+            ptrvec <- ptrfunc(ptrpars)
             ## Find entry proportions from the POPAN-general function:
             pentvec <- pentGeneral.func(rhovec, phivec, k)
             ## Find psi, chi, and ptheta for this group:
@@ -1057,7 +1063,7 @@ popanGeneral.covs.fit.func <- function(dat, k=ncol(dat[[1]]), birthfunc = immigr
             ## Number of capture histories in this group:
             popsum <- popsumList[[gp]]
             nhist <- nhistList[[gp]]
-
+            browser()
             ## Return the negative log-likelihood contribution for this group:
             nll <- -sum(
                  ## Binomial coefficients

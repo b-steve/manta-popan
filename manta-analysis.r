@@ -18,6 +18,10 @@ misool.gof[[2]]$test3sr
 ## You can get M-arrays for each group like this:
 misool.gof[[1]]$marray
 
+fit <- fit.popan(dampier.captlist, model.list = list(b = ~ occasion, phi = ~ occasion, p = ~ occasion, ptr = ~ occasion),
+                 group.pars = list(b = TRUE, phi = TRUE, p = TRUE, ptr = TRUE),
+                 group.effect = list(b = FALSE, phi = FALSE, p = FALSE, ptr = FALSE),
+                 df = covs)
 
 ## Doing everything for the misool analysis.
 misool.wrap.out <- manta.ma.wrap(misool.captlist, mei = covs$mei, chat = misool.chat,
