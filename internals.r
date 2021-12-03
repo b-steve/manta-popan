@@ -1055,33 +1055,21 @@ popanGeneral.covs.fit.func <- function(dat, k=ncol(dat[[1]]), birthfunc = immigr
             ptrvec <- ptrfunc(ptrpars)
             ## Find entry proportions from the POPAN-general function:
             pentvec <- pentGeneral.func(rhovec, phivec, k)
-            ## Find psi, chi, and ptheta for this group:
-            psivec <- psi.func(pentvec, phivec, pvec, k)
-            chivec <- chi.func(phivec, pvec, k)
-            ptheta <- ptheta.func(pentvec, pvec, chivec)
 
-            ## Number of capture histories in this group:
-            popsum <- popsumList[[gp]]
-            nhist <- nhistList[[gp]]
-            browser()
-            ## Return the negative log-likelihood contribution for this group:
-            nll <- -sum(
-                 ## Binomial coefficients
-                 ## Could use lchoose(Ns, nhist) instead of the next three lines; it gives slightly different answers
-                 ## (<=1% difference in parameter estimates over the course of the optimization) though
-                 ## it should be identical.
-                 lgamma(Ns + 1),
-                 -lgamma(nhist + 1),
-                 -lgamma(Ns - nhist + 1),
-                 ## Group capture histories including undetected
-                 (Ns - nhist) * log(1 - ptheta),
-                 popsum$first.tab * log(psivec),
-                 popsum$caps * log(pvec),
-                 popsum$non.caps * log(1 - pvec),
-                 popsum$survives[-k] * log(phivec),
-                 popsum$last.tab * log(chivec))
-            out <- get(out)
-            out
+            ## Rachel's version of the likelihood in here.
+            ## Probability of not being seen after occasion t, given alive at occasion t.
+            chivec.trans <- rep(1, k)
+            chivec.resid <- numeric(k)
+            ## Not sure what this is.
+            for (i in (k - 1):1){
+                chivec.resid[i] <- 1 - phivec[i] + phivec[i]*(1 - pvec[i + 1])*chivec[i + 1]
+            }
+            p.unseen.trans.enter1 <- 1 - pvec[1]
+            p.unseen.resid.enter1 <- (1 - pvec[1])*chivec[1]
+
+            ## Unchecked but I think it's right.
+            log.p.unseen <- log(sum((1 - pvec)*ptrvec + (1 - pvec)*chivec*(1 - ptrvec))*pentvec)
+            
         }
         ## Overall negative-log-likelihood is the sum across groups:
         nll <- sum(sapply(1:ngp, onegroup.func, out = out))
