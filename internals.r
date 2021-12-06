@@ -46,11 +46,17 @@ pentGeneral.transience.func <- function(rhovec, phivec, ptrvec, k){
     ## pentGeneral.transience.func does the same thing as above, but
     ## incorporates transience. On occasion t, the proportion of new
     ## entrants that are transients is given by ptrvec[t].
+
+    gammavec <- numeric(k - 1)
+    for (t in 1:(k - 1)){
+        gammavec[t] <- phivec[t] + (1 - ptrvec[t + 1])*rhovec[t]
+    }
+  
     pentvec <- numeric(k)
     pentvec[1] <- 1
-    pentvec[2] <- rhovec[1]*(1 - ptrvec[1])*pentvec[1]
+    pentvec[2] <- rhovec[1]*(1 - ptrvec[1])
     for (t in 2:(k - 1)){
-        pentvec[t + 1] <- rhovec[t]*(phivec[t - 1] + (1 - ptrvec[t])*rhovec[t - 1])*pentvec[t]/rhovec[t - 1]
+        pentvec[t + 1] <- rhovec[t]*prod(gammavec[1:(t - 1)])*(1 - ptrvec[1])
     }
     pentvec / sum(pentvec)
 }
@@ -416,7 +422,7 @@ plot.popan <- function(object, ...){
 }
 
 popanGeneral.covs.fit.func <- function(dat, k=ncol(dat[[1]]), birthfunc = immigrationElNino.func, phifunc, pfunc,
-                                       ptrfunc, use.bobyqa = TRUE,
+                                       ptrfunc, use.nlm = TRUE,
                                        model=list(
                                            gp1=c("Ns.1", "b1.1", "b2.1", rep("phi1.1", k-1), paste0("p", 1:k, ".1")),
                                            gp2=c("Ns.2", "b1.1", "b2.1", rep("phi1.1", k-1), paste0("p", 1:k, ".2"))),
@@ -589,7 +595,7 @@ popanGeneral.covs.fit.func <- function(dat, k=ncol(dat[[1]]), birthfunc = immigr
             det.dat <- det.datList[[gp]]
             if (Ns < nhist) return(NA)
             
-            liktype <- "rachel"
+            liktype <- "ben"
             if (liktype == "rachel"){
                 ## Find the chi parameters.  chivec[t] = P(never seen after occasion t | alive at t).
                 pentvec <- pentGeneral.func(rhovec, phivec, k)
@@ -782,7 +788,7 @@ popanGeneral.covs.fit.func <- function(dat, k=ncol(dat[[1]]), birthfunc = immigr
     ## --------------------------------------------------------------------------------------------------
     ## Fit popan model and return:
     ## -----------------------------------------------------------------------------------------------------
-    if (use.bobyqa){
+    if (use.nlm){
         fit <- nlm(p = startvec,
                    f = negloglik.func, iterlim = 1e5)
         fit <- list(par = fit$estimate, objective = fit$minimum, convergence = fit$code, iterations = fit$iterations)
@@ -800,6 +806,7 @@ popanGeneral.covs.fit.func <- function(dat, k=ncol(dat[[1]]), birthfunc = immigr
     rhos <- negloglik.func(pars = fit$par, out = "rhovec")
     ps <- negloglik.func(pars = fit$par, out = "pvec")
     Ns <- negloglik.func(pars = fit$par, out = "Ns")
+    ptrs <- negloglik.func(pars = fit$par, out = "ptrvec")
     ENs <- matrix(0, nrow = k, ncol = ngp)
     ENs[1, ] <- Ns*pents[1, ]
     for (i in 2:k){
