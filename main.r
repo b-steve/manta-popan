@@ -33,7 +33,7 @@
 ##               determine detection probabilities. If FALSE, then
 ##               the coefficent for x is separately estimated for each
 ##               group.
-fit.popan <- function(captlist, model.list = NULL, group.pars = NULL, group.effect = NULL, transience = TRUE, df = NULL, printit = FALSE){
+fit.popan <- function(captlist, model.list = NULL, group.pars = NULL, group.effect = NULL, transience = TRUE, df = NULL, printit = FALSE, use.bobyqa = TRUE){
     ## Saving function arguments.
     args <- list(captlist = captlist, model.list = model.list,
                  group.pars = group.pars, group.effect = group.effect,
@@ -99,6 +99,9 @@ fit.popan <- function(captlist, model.list = NULL, group.pars = NULL, group.effe
     ## Start values for b parameters.
     b.startvec <- numeric(sum(sapply(b.par.names, length)))
     names(b.startvec) <- c(b.par.names, recursive = TRUE)
+    b.prefix <- sapply(strsplit(names(b.startvec), "[.]"), function(x) x[1])
+    b.startvec[substr(b.prefix, nchar(b.prefix), nchar(b.prefix)) == 1] <- log(0.1)
+    
     ## Doing all the same stuff with phi.
     ## Model for survival parameters.
     phi.model <- model.list[["phi"]]
@@ -141,6 +144,8 @@ fit.popan <- function(captlist, model.list = NULL, group.pars = NULL, group.effe
     ## Start values for phi parameters.
     phi.startvec <- numeric(sum(sapply(phi.par.names, length)))
     names(phi.startvec) <- c(phi.par.names, recursive = TRUE)
+    phi.prefix <- sapply(strsplit(names(phi.startvec), "[.]"), function(x) x[1])
+    phi.startvec[substr(phi.prefix, nchar(phi.prefix), nchar(phi.prefix)) == 1] <- qlogis(0.9)
     
     ## Doing all the same stuff with ptr.
     ## Model for survival parameters.
@@ -183,7 +188,9 @@ fit.popan <- function(captlist, model.list = NULL, group.pars = NULL, group.effe
     ## Start values for p parameters.
     ptr.startvec <- numeric(sum(sapply(ptr.par.names, length)))
     names(ptr.startvec) <- c(ptr.par.names, recursive = TRUE)
-    ptr.startvec[(substr(names(ptr.startvec), 1, 2) == "ptr1")] <- qlogis(0.1)
+    ptr.prefix <- sapply(strsplit(names(ptr.startvec), "[.]"), function(x) x[1])
+    ptr.startvec[substr(ptr.prefix, nchar(ptr.prefix), nchar(ptr.prefix)) == 1] <- qlogis(0.1)
+    
 
     ## Doing all the same stuff with p.
     ## Model for survival parameters.
@@ -226,10 +233,11 @@ fit.popan <- function(captlist, model.list = NULL, group.pars = NULL, group.effe
     ## Start values for p parameters.
     p.startvec <- numeric(sum(sapply(p.par.names, length)))
     names(p.startvec) <- c(p.par.names, recursive = TRUE)
-    p.startvec[(substr(names(p.startvec), 1, 2) == "p1")] <- qlogis(0.1)
+    p.startvec[1] <- qlogis(0.5)
     
     ## Start values for the N parameters.
-    Ns.startvec <- c(Ns.1 = 1000, Ns.2 = 1200)
+    Ns.startvec <- 3*sapply(captlist, nrow)
+    names(Ns.startvec) <- paste("Ns", 1:n.groups, sep = ".")
     ## Creating model object.
     model <- list()
     for (i in 1:n.groups){
@@ -240,7 +248,8 @@ fit.popan <- function(captlist, model.list = NULL, group.pars = NULL, group.effe
     startvec <- c(Ns.startvec, b.startvec, phi.startvec, p.startvec, ptr.startvec[transience])
     ## Fitting the model.
     out <- popanGeneral.covs.fit.func(captlist, k = k, birthfunc = b.func, phifunc = phi.func,
-                                      pfunc = p.func, ptrfunc = ptr.func, model = model,
+                                      pfunc = p.func, ptrfunc = ptr.func, use.bobyqa = use.bobyqa,
+                                      model = model,
                                       transience = transience, startvec = startvec, printit = printit)
     out$args <- args
     out
@@ -1027,6 +1036,7 @@ popan.plot <- function(fit.ma, year.start = 2009, year.end = 2019) {
 
 
 ## Some packages.
+library(minqa)
 library(mgcv)
 library(parallel)
 library(R2ucare)
