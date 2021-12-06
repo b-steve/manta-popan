@@ -153,8 +153,8 @@ fit.popan <- function(captlist, model.list = NULL, group.pars = NULL, group.effe
     if (is.null(ptr.model)){
         ptr.model <- ~ occasion
     }
-    ## Creating a function to model detection probability parameters.
-    ptr.obj <- cov.func(ptr.model, df, plogis)
+    ## Creating a function to model transience probability parameters.
+    ptr.obj <- cov.func(ptr.model, df[-k, , drop = FALSE], plogis)
     ## The function.
     ptr.func <- ptr.obj[[1]]
     ## Number of parameters.

@@ -47,8 +47,8 @@ pentGeneral.transience.func <- function(rhovec, phivec, ptrvec, k){
     ## incorporates transience. On occasion t, the proportion of new
     ## entrants that are transients is given by ptrvec[t].
 
-    gammavec <- numeric(k - 1)
-    for (t in 1:(k - 1)){
+    gammavec <- numeric(k - 2)
+    for (t in 1:(k - 2)){
         gammavec[t] <- phivec[t] + (1 - ptrvec[t + 1])*rhovec[t]
     }
   
@@ -390,7 +390,7 @@ simGroups.popanGeneral.func <- function(k=11,
 
 plot.popan <- function(object, ...){
     par(mfrow = c(3, 2))
-    for (i in 3:6){
+    for (i in 3:7){
         plot.new()
         ys <- object[[i]]
         k <- nrow(ys)
@@ -582,11 +582,12 @@ popanGeneral.covs.fit.func <- function(dat, k=ncol(dat[[1]]), birthfunc = immigr
             if (transience){
                 ptrvec <- ptrfunc(ptrpars)
             } else {
-                ptrvec <- rep(0, length(pvec))
+                ptrvec <- rep(0, k - 1)
             }
+            ## Final element of ptrvec doesn't affect the likelihood.
+            ptrvec.full <- c(ptrvec, 0)
             ## Find entry proportions from the POPAN-general function:
             pentvec <- pentGeneral.transience.func(rhovec, phivec, ptrvec, k)
-            
             ## Number of capture histories in this group:
             popsum <- popsumList[[gp]]
             nhist <- nhistList[[gp]]
@@ -700,8 +701,8 @@ popanGeneral.covs.fit.func <- function(dat, k=ncol(dat[[1]]), birthfunc = immigr
             for (i in (k - 1):1){
                 chivec.resid[i] <- 1 - phivec[i] + phivec[i]*(1 - pvec[i + 1])*chivec.resid[i + 1]
             }
-            ## Probability of an individual being undetected.
-            log.p.unseen <- log(sum(((1 - pvec)*ptrvec + (1 - pvec)*chivec.resid*(1 - ptrvec))*pentvec))
+                ## Probability of an individual being undetected.
+            log.p.unseen <- log(sum(((1 - pvec)*ptrvec.full + (1 - pvec)*chivec.resid*(1 - ptrvec.full))*pentvec))
             ## Likelihood contribution from the unseen individuals.
                 nllike <- -lgamma(Ns + 1) + lgamma(Ns - nhist + 1) - (Ns - nhist) * log.p.unseen
             ## Likelihood contributions from animals that were seen.
@@ -740,7 +741,7 @@ popanGeneral.covs.fit.func <- function(dat, k=ncol(dat[[1]]), birthfunc = immigr
                         ## For residents, joint probability of entry and obtaining all leading zeroes.
 
                         ## same as the prob.to.f.m.1
-                        prob.resid.et.start <- pentvec[1:f]*(1 - ptrvec[1:f])*psif.vec
+                        prob.resid.et.start <- pentvec[1:f]*(1 - ptrvec.full[1:f])*psif.vec
                         log.prob.resid.hst <- sum(datvec.hst*log(p.hst) +
                                                   (1 - datvec.hst)*log(1 - p.hst))
                         ## Survival between first and last detections if we have more than one.
@@ -756,7 +757,7 @@ popanGeneral.covs.fit.func <- function(dat, k=ncol(dat[[1]]), birthfunc = immigr
                         ## detected.
                         prob.trans.et <- numeric(f)
                         if (sum(dat.f[hst, ]) == 1){
-                            prob.trans.et[f] <- pentvec[f]*ptrvec[f]*pvec[f]
+                            prob.trans.et[f] <- pentvec[f]*ptrvec.full[f]*pvec[f]
                         }
                         ## Putting it all together for this animal.
                         nllike <- nllike - log(sum(prob.resid.et + prob.trans.et))
@@ -812,7 +813,7 @@ popanGeneral.covs.fit.func <- function(dat, k=ncol(dat[[1]]), birthfunc = immigr
     for (i in 2:k){
         ENs[i, ] <- phis[i - 1, ]*ENs[i - 1, ] + Ns*pents[i, ]
     }
-    out <- list(fit = fit, Ns = Ns, phis = phis, rhos = rhos, ps = ps, pents = pents, ENs = ENs)
+    out <- list(fit = fit, Ns = Ns, phis = phis, rhos = rhos, ps = ps, ptrs = ptrs, pents = pents, ENs = ENs)
     class(out) <- "popan"
     out
 }
