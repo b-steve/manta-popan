@@ -33,7 +33,7 @@
 ##               determine detection probabilities. If FALSE, then
 ##               the coefficent for x is separately estimated for each
 ##               group.
-fit.popan <- function(captlist, model.list = NULL, group.pars = NULL, group.effect = NULL, df = NULL, printit = FALSE){
+fit.popan <- function(captlist, model.list = NULL, group.pars = NULL, group.effect = NULL, transience = TRUE, df = NULL, printit = FALSE){
     ## Saving function arguments.
     args <- list(captlist = captlist, model.list = model.list,
                  group.pars = group.pars, group.effect = group.effect,
@@ -237,11 +237,11 @@ fit.popan <- function(captlist, model.list = NULL, group.pars = NULL, group.effe
     }
     names(model) <- paste0("gp", 1:n.groups)
     ## Putting together the start values.
-    startvec <- c(Ns.startvec, b.startvec, phi.startvec, p.startvec, ptr.startvec)
+    startvec <- c(Ns.startvec, b.startvec, phi.startvec, p.startvec, ptr.startvec[transience])
     ## Fitting the model.
     out <- popanGeneral.covs.fit.func(captlist, k = k, birthfunc = b.func, phifunc = phi.func,
                                       pfunc = p.func, ptrfunc = ptr.func, model = model,
-                                      startvec = startvec, printit = printit)
+                                      transience = transience, startvec = startvec, printit = printit)
     out$args <- args
     out
 }

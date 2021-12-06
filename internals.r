@@ -42,6 +42,19 @@ pentGeneral.func <- function(rhovec, phivec, k){
     pentvec / sum(pentvec)
 }
 
+pentGeneral.transience.func <- function(rhovec, phivec, ptrvec, k){
+    ## pentGeneral.transience.func does the same thing as above, but
+    ## incorporates transience. On occasion t, the proportion of new
+    ## entrants that are transients is given by ptrvec[t].
+    pentvec <- numeric(k)
+    pentvec[1] <- 1
+    pentvec[2] <- rhovec[1]*(1 - ptrvec[1])*pentvec[1]
+    for (t in 2:(k - 1)){
+        pentvec[t + 1] <- rhovec[t]*(phivec[t - 1] + (1 - ptrvec[t])*rhovec[t - 1])*pentvec[t]/rhovec[t - 1]
+    }
+    pentvec / sum(pentvec)
+}
+
 ###############################################################
 ## Function to summarise data for popan model
 popansummary.func <- function(det.dat) {
@@ -92,6 +105,9 @@ popansummary.func <- function(det.dat) {
         last.tab = as.vector(last.tab)
     )
     attributes(summaries)$nhist <- nhist
+    attributes(summaries)$first.obs <- first.obs
+    attributes(summaries)$last.obs <- last.obs
+    attributes(summaries)$det.dat <- det.dat
     summaries
 }
 
@@ -313,7 +329,6 @@ popanLambda.fit.func <- function(dat, k=ncol(dat[[1]]), model=list(
     ## (i.e. index 2). We will populate the whole vector of parameters inside the likelihood by using
     ## allpars = pars[parInds].
     parInds <- match(allparvec, parsEstvec)
-
     ## Check that all parameters for estimation have been given start values in startvec:
     if(!all(parsEstvec %in% names(startvec))) stop("some parameter start values are missing from startvec.")
     startvec <- startvec[parsEstvec]
@@ -322,7 +337,9 @@ popanLambda.fit.func <- function(dat, k=ncol(dat[[1]]), model=list(
     ## Summarise the data using Robin's summary functions:
     popsumList <- lapply(dat, popansummary.func)
     nhistList <- lapply(popsumList, function(x) attributes(x)$nhist)
-
+    first.obsList <- lapply(popsumList, function(x) attributes(x)$first.obs)
+    last.obsList <- lapply(popsumList, function(x) attributes(x)$last.obs)
+    det.datList <- lapply(popsumList, function(x) attributes(x)$det.dat)
     ## -----------------------------------------------------------------------------------------------------
     ## Vectors of lower and upper parameter limits for the nlminb optimization.
     ## -----------------------------------------------------------------------------------------------------
@@ -710,7 +727,9 @@ popanGeneral.fit.func <- function(dat, k=ncol(dat[[1]]), birthfunc = immigration
     ## Summarise the data using Robin's summary functions:
     popsumList <- lapply(dat, popansummary.func)
     nhistList <- lapply(popsumList, function(x) attributes(x)$nhist)
-
+    first.obsList <- lapply(popsumList, function(x) attributes(x)$first.obs)
+    last.obsList <- lapply(popsumList, function(x) attributes(x)$last.obs)
+    det.datList <- lapply(popsumList, function(x) attributes(x)$det.dat)
     ## -----------------------------------------------------------------------------------------------------
     ## Vectors of lower and upper parameter limits for the nlminb optimization.
     ## -----------------------------------------------------------------------------------------------------
@@ -912,6 +931,7 @@ popanGeneral.covs.fit.func <- function(dat, k=ncol(dat[[1]]), birthfunc = immigr
                                        ##
                                        ## startvec is a named vector: it needs all the entries specified in model, but in any order.
                                        ## If startvec includes parameters that aren't needed for the specified model, they are ignored.
+                                       transience = TRUE,
                                        startvec=c(Ns.1=950, Ns.2=1150, b1.1=0.15, b2.1=0.1, phi1.1=0.93,
                                                   structure(rep(0.45, k), .Names=paste0("p", 1:k, ".1")),  ## start p's for group 1
                                                   structure(rep(0.45, k), .Names=paste0("p", 1:k, ".2"))),  ## start p's for group 2
@@ -990,7 +1010,7 @@ popanGeneral.covs.fit.func <- function(dat, k=ncol(dat[[1]]), birthfunc = immigr
     ## (i.e. index 2). We will populate the whole vector of parameters inside the likelihood by using
     ## allpars = pars[parInds].
     parInds <- match(allparvec, parsEstvec)
-
+    browser()
     ## Check that all parameters for estimation have been given start values in startvec:
     if(!all(parsEstvec %in% names(startvec))) stop("some parameter start values are missing from startvec.")
     startvec <- startvec[parsEstvec]
@@ -999,7 +1019,9 @@ popanGeneral.covs.fit.func <- function(dat, k=ncol(dat[[1]]), birthfunc = immigr
     ## Summarise the data using Robin's summary functions:
     popsumList <- lapply(dat, popansummary.func)
     nhistList <- lapply(popsumList, function(x) attributes(x)$nhist)
-
+    first.obsList <- lapply(popsumList, function(x) attributes(x)$first.obs)
+    last.obsList <- lapply(popsumList, function(x) attributes(x)$last.obs)
+    det.datList <- lapply(popsumList, function(x) attributes(x)$det.dat)
     ## -----------------------------------------------------------------------------------------------------
     ## Vectors of lower and upper parameter limits for the nlminb optimization.
     ## -----------------------------------------------------------------------------------------------------
@@ -1032,6 +1054,7 @@ popanGeneral.covs.fit.func <- function(dat, k=ncol(dat[[1]]), birthfunc = immigr
     ## Negative log likelihood function:
     ## -----------------------------------------------------------------------------------------------------
     negloglik.func <- function(pars, out = "nll") {
+
         ## pars contains only the parameters for estimation.
         ## Populate the vector of all parameters by mapping pars to allpars as follows:
         allpars <- pars[parInds]
@@ -1039,12 +1062,15 @@ popanGeneral.covs.fit.func <- function(dat, k=ncol(dat[[1]]), birthfunc = immigr
 
         ## Inner function to find the neg-log-likelihood contribution for a single group.
         onegroup.func <- function(gp, out){
+            browser()
             ## Unpack the parameters for this group:
             Ns <- allpars[paste0("Ns.", gp)]
             bpars <- allpars[paste0("b", 1:nbpar, ".", gp)]  ## nbpars of these
             phipars <- allpars[paste0("phi", 1:nphipar, ".", gp)]  ## nphipar of these
             ppars <- allpars[paste0("p", 1:nppar, ".", gp)]  ## nppar of these
-            ptrpars <- allpars[paste0("ptr", 1:nppar, ".", gp)]
+            if (transience){
+                ptrpars <- allpars[paste0("ptr", 1:nptrpar, ".", gp)]
+            }
             ## Use the birthfunc supplied to convert bpars into rhovec:
             rhovec <- birthfunc(bpars)
             ## Use phifunc supplied to convert phipars into phivec.
@@ -1052,24 +1078,179 @@ popanGeneral.covs.fit.func <- function(dat, k=ncol(dat[[1]]), birthfunc = immigr
             ## Use phifunc supplied to convert phipars into phivec.
             pvec <- pfunc(ppars)
             ## Use ptrfunc supplied to convert ptrpars to ptrvec.
-            ptrvec <- ptrfunc(ptrpars)
+            if (transience){
+                ptrvec <- ptrfunc(ptrpars)
+            } else {
+                ptrvec <- rep(0, length(pvec))
+            }
             ## Find entry proportions from the POPAN-general function:
-            pentvec <- pentGeneral.func(rhovec, phivec, k)
+            pentvec <- pentGeneral.transience.func(rhovec, phivec, ptrvec, k)
 
-            ## Rachel's version of the likelihood in here.
+            ## Number of capture histories in this group:
+            popsum <- popsumList[[gp]]
+            nhist <- nhistList[[gp]]
+            first.obs <- first.obsList[[gp]]
+            last.obs <- last.obsList[[gp]]
+            det.dat <- det.datList[[gp]]
+
+            liktype <- "rachel"
+
+            if (liktype == "rachel"){
+                                ## Find the chi parameters.  chivec[t] = P(never seen after occasion t | alive at t).
+                ## Simultaneously with chivec, create a vector of length k-1 called psurvive.gap, such that
+                ## psurvive.gap[i] = P(survive from survey i to survey i+1 | alive at survey i)
+                ## and it is the product of phivec probabilities spanning the calendar years from survey i to survey i+1.
+                chivec <- numeric(k)
+                chivec[k] <- 1
+                psurvive.gap <- numeric(k-1)
+                phi.min.index <- length(phivec) + 1
+                for(i in (k-1):1) {
+                        chivec[i] <- 1 - phivec[i] + phivec[i] * (1-pvec[i+1]) * chivec[i+1]
+                }
+                log.phivec <- log(phivec)
+
+                ## First create the Binomial portion of the likelihood, and account for all animals never seen.
+                ## p.unseen = pent1 (1-p1) chi_1 + pent2 (1-p2) chi_2 + ... + pent.k (1-pk) chi_k
+                log.p.unseen <- log(sum(pentvec * (1-pvec) * chivec))
+                ## The N-nhist animals never seen give likelihood contribution proportional to
+                ## N! / (N-nhist)! p.unseen^(N-nhist)
+                ## so the analytic continuation of the negative log likelihood contribution is
+                ## -lgamma(N+1) + lgamma(N-nhist+1) - (N-nhist) log(p.unseen):
+                nllike <- -lgamma(Ns + 1) + lgamma(Ns - nhist + 1) - (Ns - nhist) * log.p.unseen
+
+                ## Now for the animals that were seen.
+                ## Go through the data frame according to the occasion of first sighting,
+                ## finding capture history probabilities:
+                for(f in 1:k) if(any(first.obs==f)){
+                        ## (f for first-obs)
+                        ## Extract the data records with first sighting on occasion f:
+                        dat.f <- det.dat[first.obs==f, ,drop=F]
+                        last.dat.f <- last.obs[first.obs==f]
+                        n.f <- length(last.dat.f)
+
+                        ## Calculate the psi parameters for this value of first-obs.
+                        ## For a particular f, psif.vec is a vector of length f, where
+                        ## psif.vec[i] = P(not seen on occasions i, ..., f-1 and survives to occasion f | alive at i)
+                        psif.vec <- numeric(f)
+                        psif.vec[f] <- 1
+                        if(f > 1) for( i in (f-1):1) psif.vec[i] = (1 - pvec[i]) * phivec[i] * psif.vec[i+1]
+
+                        ## All histories with first observation at time f have the same probability up to time f-1:
+                        ## prob.to.f.m.1 = (pent1 * psif.1 + ... + pent.f * psif.f)
+                        prob.to.f.m.1 <- sum(pentvec[1:f] * psif.vec)
+                        log.prob.to.f.m.1 <- log(prob.to.f.m.1)
+
+                        ## Find the capture history probabilities.  For the capture history
+                        ##               F       L
+                        ## (0  ...  0  1  ...  1  0 ... 0)
+                        ##
+                        ## where the record is delta_i for i=F, ..., L, the probability is:
+                        ##
+                        ## (i) if L=F,    prob.to.f.m.1 * p_L * chi_L
+                        ## (ii) if L >= F+1,
+                        ##         prob.to.f.m.1 * p_L * chi_L *
+                        ##                prod_{i=F}^{L-1} [ p_i^delta_i  (1-p_i)^{1-delta_i} * phivec_i ]
+
+                        ## First: ALL animals contribute prob.to.f.m.1 * pvec[L] * chivec[L], so add this in for all animals:
+                        nllike <- nllike - n.f * (log.prob.to.f.m.1)  - sum(log(pvec[last.dat.f])) - sum(log(chivec[last.dat.f]))
+
+                        ## Now add in the extra probabilities of records from occasions f to L-1, for animals
+                        ## that have L >= F+1:
+                        for(hst in 1:n.f) if(last.dat.f[hst] > f){
+                                last.hst <- last.dat.f[hst]
+                                ## datvec.hst is the string of 0s and 1s for the single history hst, from the occasion f of its
+                                ## first sighting to the occasion L-1 immediately previous to its last sighting.
+                                datvec.hst <- dat.f[hst, f:(last.hst-1)]
+                                p.hst <- pvec[f:(last.hst-1)]
+                                log.phivec.hst <- log.phivec[f:(last.hst-1)]
+                                ## The contribution to the log-likelihood from datvec.hst is
+                                ## log { prod_{i=F}^{L-1} [ p_i^delta_i  (1-p_i)^{1-delta_i} * phivec_i ] }
+                                ## = sum_{i=F}^{L-1} {  delta_i*log(p_i) + (1-delta_i)*log(1-p_i) + log(phivec_i)}
+                                loglik.hst <- datvec.hst * log(p.hst) + (1 - datvec.hst) * log(1-p.hst) + log.phivec.hst
+                                nllike <- nllike - sum(loglik.hst)
+                        }
+
+                }  ## End of f (likelihood for all animals with first sighting at occasion f).
+
+                if(is.na(nllike)) nllike <- 20000*(max(abs(pars), na.rm=T)+1)
+                if(is.infinite(nllike)) nllike <- 30000*(max(abs(pars), na.rm=T)+1)
+
+                ## Print current values if required:
+                ## print(data.frame(c(allparvec, "nllike"), c(allvalues, nllike)));cat("\n")
+
+                
+                return(nllike)
+            }
+            
+            
+
+            
             ## Probability of not being seen after occasion t, given alive at occasion t.
             chivec.trans <- rep(1, k)
             chivec.resid <- numeric(k)
-            ## Not sure what this is.
+            chivec.resid[k] <- 1
             for (i in (k - 1):1){
-                chivec.resid[i] <- 1 - phivec[i] + phivec[i]*(1 - pvec[i + 1])*chivec[i + 1]
+                chivec.resid[i] <- 1 - phivec[i] + phivec[i]*(1 - pvec[i + 1])*chivec.resid[i + 1]
             }
-            p.unseen.trans.enter1 <- 1 - pvec[1]
-            p.unseen.resid.enter1 <- (1 - pvec[1])*chivec[1]
-
-            ## Unchecked but I think it's right.
-            log.p.unseen <- log(sum((1 - pvec)*ptrvec + (1 - pvec)*chivec*(1 - ptrvec))*pentvec)
-            
+            ## Probability of an individual being undetected.
+            log.p.unseen <- log(sum(((1 - pvec)*ptrvec + (1 - pvec)*chivec.resid*(1 - ptrvec))*pentvec))
+            ## Likelihood contribution from the unseen individuals.
+            nllike <- -lgamma(Ns + 1) + lgamma(Ns - nhist + 1) - (Ns - nhist) * log.p.unseen
+            ## Likelihood contributions from animals that were seen.
+            for (f in 1:k){
+                if (any(first.obs == f)){
+                    ## (f for first-obs)
+                    ## Extract the data records with first sighting on occasion f:
+                    dat.f <- det.dat[first.obs==f, ,drop=F]
+                    last.dat.f <- last.obs[first.obs==f]
+                    n.f <- length(last.dat.f)
+                    ## Calculate the psi parameters for this value of first-obs.
+                    ## For a particular f, psif.vec is a vector of length f, where
+                    ## psif.vec[i] = P(not seen on occasions i, ..., f-1 and survives to occasion f | alive at i)
+                    psif.vec <- numeric(f)
+                    psif.vec[f] <- 1
+                    if(f > 1){
+                        for( i in (f-1):1) {
+                            psif.vec[i] = (1 - pvec[i]) * phivec[i] * psif.vec[i+1]
+                        }
+                    }
+                    
+                    ## All residents with first observation at time f have the same probability up to time f-1:
+                    ## prob.to.f.m.1 = (pent1 * psif.1 + ... + pent.f * psif.f). Note that the mixture component
+                    ## due to transients is zero, because transients don't survive.
+                    prob.to.f.m.1 <- sum(pentvec[1:f] * psif.vec)
+                    log.prob.to.f.m.1 <- log(prob.to.f.m.1)
+                    
+                    ## We need p(capt | transient) p(transient) + p(capt | resident) p(resident).
+                    for (hst in 1:n.f){
+                        last.hst <- last.dat.f[hst]
+                        ## datvec.hst is the string of 0s and 1s for the single history hst, from the occasion f of its
+                        ## first sighting to the occasion L-1 immediately previous to its last sighting.
+                        datvec.hst <- dat.f[hst, f:(last.hst-1)]
+                        p.hst <- pvec[f:(last.hst-1)]
+                        phi.hst <- phivec[f:(last.hst-1)]
+                        ## For residents, joint probability of entry and obtaining all leading zeroes.
+                        prob.resid.et.start <- pentvec[1:f]*(1 - ptrvec[1:f])*psif.vec
+                        prob.resid.hst <- exp(sum(datvec.hst*log(p.hst) +
+                                                  (1 - datvec.hst)*log(1 - p.hst) +
+                                                  log(phi.hst)))
+                        prob.resid.end <- pvec[last.hst]*chivec.resid[last.hst]
+                        prob.resid.et <- prob.resid.et.start*prob.resid.hst*prob.resid.end
+                        ## Capture histories for transients are impossible
+                        ## unless they have a single detection, in which
+                        ## case it must enter in the right session and be
+                        ## detected.
+                        prob.trans.et <- numeric(n.f)
+                        if (sum(dat.f[hst, ]) == 1){
+                            prob.trans.et[f] <- pentvec[f]*ptrvec[f]*pvec[f]
+                        }
+                        ## Putting it all together for this animal.
+                        nllike <- nllike -log(sum(prob.resid.et + prob.trans.et))
+                    }
+                }
+            }
+            browser()
+            nllike
         }
         ## Overall negative-log-likelihood is the sum across groups:
         nll <- sum(sapply(1:ngp, onegroup.func, out = out))
