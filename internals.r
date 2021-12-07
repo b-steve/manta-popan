@@ -437,7 +437,8 @@ popanGeneral.covs.fit.func <- function(dat, k=ncol(dat[[1]]), birthfunc = immigr
                                        transience = TRUE,
                                        startvec=c(Ns.1=950, Ns.2=1150, b1.1=0.15, b2.1=0.1, phi1.1=0.93,
                                                   structure(rep(0.45, k), .Names=paste0("p", 1:k, ".1")),  ## start p's for group 1
-                                                  structure(rep(0.45, k), .Names=paste0("p", 1:k, ".2"))),  ## start p's for group 2
+                                                  structure(rep(0.45, k), .Names=paste0("p", 1:k, ".2"))),
+                                       lowervec = NULL, uppervec = NULL,  ## start p's for group 2
                                        printit=FALSE){
     
     ## popanGeneral.fit.func
@@ -515,6 +516,7 @@ popanGeneral.covs.fit.func <- function(dat, k=ncol(dat[[1]]), birthfunc = immigr
     parInds <- match(allparvec, parsEstvec)
     ## Check that all parameters for estimation have been given start values in startvec:
     if(!all(parsEstvec %in% names(startvec))) stop("some parameter start values are missing from startvec.")
+    startvec.save <- startvec
     startvec <- startvec[parsEstvec]
 
     ## -----------------------------------------------------------------------------------------------------
@@ -530,28 +532,36 @@ popanGeneral.covs.fit.func <- function(dat, k=ncol(dat[[1]]), birthfunc = immigr
     ## Assume the bpars are restricted between 0 and infinity (or edit below if not).
     ## All parameters except for Ns's have lower limit of 0 (set to 1e-6 to keep out of trouble at the boundaries):
     npar <- length(parsEstvec)
-    lowervec <- rep(1e-6, npar)
-    lowervec[grep("b", parsEstvec)] <- -Inf
-    lowervec[grep("phi", parsEstvec)] <- -Inf
-    lowervec[grep("p", parsEstvec)] <- -Inf
-    lowervec[grep("ptr", parsEstvec)] <- -Inf
-    ## For the Ns parameters, insert lower limit which is the maximum of nhist for all the groups that
-    ## possess that parameter.  For example if Ns.1=Ns.2 in the model, then the constraint for Ns.1
-    ## is that it must be greater than both nhistList[[1]] and nhistList[[2]].
-    for(gp in 1:ngp){
-        Nsgp <- paste0("Ns.", gp)
-        groupsUsingNsgp <- unique(as.numeric(gsub(pattern="Ns.", replacement="",
-                                                  x=allparnames[allparvec==Nsgp])))
-        if(length(groupsUsingNsgp)>0)
-            lowervec[parsEstvec==Nsgp] <- max(unlist(nhistList[groupsUsingNsgp]))
+    if (is.null(lowervec)){
+        lowervec <- rep(1e-6, npar)
+        lowervec[grep("b", parsEstvec)] <- -Inf
+        lowervec[grep("p", parsEstvec)] <- -Inf
+        lowervec[grep("phi", parsEstvec)] <- -Inf
+        lowervec[grep("ptr", parsEstvec)] <- -Inf
+        ## For the Ns parameters, insert lower limit which is the maximum of nhist for all the groups that
+        ## possess that parameter.  For example if Ns.1=Ns.2 in the model, then the constraint for Ns.1
+        ## is that it must be greater than both nhistList[[1]] and nhistList[[2]].
+        for(gp in 1:ngp){
+            Nsgp <- paste0("Ns.", gp)
+            groupsUsingNsgp <- unique(as.numeric(gsub(pattern="Ns.", replacement="",
+                                                      x=allparnames[allparvec==Nsgp])))
+            if(length(groupsUsingNsgp)>0)
+                lowervec[parsEstvec==Nsgp] <- max(unlist(nhistList[groupsUsingNsgp]))
+        }
+    } else {
+        lowervec <- lowervec[parsEstvec]
     }
     ## uppervec is 1 for phi and p parameters, Inf for Ns, bpar, and phipar parameters:
-    uppervec <- rep(1-1e-6, npar)
-    uppervec[grep("Ns", parsEstvec)] <- Inf
-    uppervec[grep("b", parsEstvec)] <- Inf
-    uppervec[grep("phi", parsEstvec)] <- Inf
-    uppervec[grep("p", parsEstvec)] <- Inf
-    uppervec[grep("ptr", parsEstvec)] <- Inf
+    if (is.null(uppervec)){
+        uppervec <- rep(1-1e-6, npar)
+        uppervec[grep("Ns", parsEstvec)] <- Inf
+        uppervec[grep("b", parsEstvec)] <- Inf
+        uppervec[grep("p", parsEstvec)] <- Inf
+        uppervec[grep("phi", parsEstvec)] <- Inf
+        uppervec[grep("ptr", parsEstvec)] <- Inf
+    } else {
+        uppervec <- uppervec[parsEstvec]
+    }
     ## -----------------------------------------------------------------------------------------------------
     ## Negative log likelihood function:
     ## -----------------------------------------------------------------------------------------------------
@@ -789,18 +799,12 @@ popanGeneral.covs.fit.func <- function(dat, k=ncol(dat[[1]]), birthfunc = immigr
     ## --------------------------------------------------------------------------------------------------
     ## Fit popan model and return:
     ## -----------------------------------------------------------------------------------------------------
-    if (use.nlm){
-        fit <- nlm(p = startvec,
-                   f = negloglik.func, iterlim = 1e5)
-        fit <- list(par = fit$estimate, objective = fit$minimum, convergence = fit$code, iterations = fit$iterations)
-    } else {
-        fit <- nlminb(
-            start = startvec,
-            objective = negloglik.func,
-            lower = lowervec,
-            upper = uppervec,
-            control=list(iter.max=1000, eval.max=5000))
-    }
+    fit <- nlminb(
+        start = startvec,
+        objective = negloglik.func,
+        lower = lowervec,
+        upper = uppervec,
+        control=list(iter.max=1000, eval.max=5000))
     pents <- negloglik.func(pars = fit$par, out = "pentvec")
     rownames(pents) <- NULL
     phis <- negloglik.func(pars = fit$par, out = "phivec")
@@ -960,7 +964,18 @@ cov.func <- function(formula, df, invlink = identity){
              function(pars){
                  c(invlink(mm %*% pars))
              },
-         n.par = n.par)
+         n.par = n.par,
+         lower = rep(-Inf, n.par),
+         upper = rep(Inf, n.par))
+}
+
+## Function that generates a parameter modelling function for when
+## separate estimates are required for each occasion.
+cov.func.occ <- function(k, lower = 0, upper = Inf){
+    list(fun = function(pars) pars,
+         n.par = k,
+         lower = rep(lower, k),
+         upper = rep(upper, k))
 }
 
 par.fit.popan <- function(n.cores, ..., arg.list = NULL){

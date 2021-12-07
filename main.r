@@ -33,11 +33,13 @@
 ##               determine detection probabilities. If FALSE, then
 ##               the coefficent for x is separately estimated for each
 ##               group.
-fit.popan <- function(captlist, model.list = NULL, group.pars = NULL, group.effect = NULL, transience = TRUE, df = NULL, printit = FALSE, use.nlm = TRUE){
+fit.popan <- function(captlist, model.list = NULL, group.pars = NULL, group.effect = NULL, df = NULL, printit = FALSE, use.nlm = TRUE){
     ## Saving function arguments.
     args <- list(captlist = captlist, model.list = model.list,
                  group.pars = group.pars, group.effect = group.effect,
                  df = df, printit = printit)
+    ## Detecting whether or not we are fitting a transience model.
+    transience <- any(names(model.list) == "ptr")
     ## If captlist is a matrix, turn it into a list for consistency.
     if (!is.list(captlist)){
         captlist <- list(captlist)
@@ -57,14 +59,19 @@ fit.popan <- function(captlist, model.list = NULL, group.pars = NULL, group.effe
     if (is.null(b.model)){
         b.model <- ~ occasion
     }
-    ## Creating a function to model birth parameters. Note that it
-    ## doesn't use the covariates for the final occasion.
-    b.obj <- cov.func(b.model, df[-k, , drop = FALSE], exp)
+    b.occ <- FALSE # (as.character(b.model)[-1] == "occasion") & (!group.effect[["b"]])
+    if (b.occ){
+        b.obj <- cov.func.occ(k - 1)
+    } else {
+        ## Creating a function to model birth parameters. Note that it
+        ## doesn't use the covariates for the final occasion.
+        b.obj <- cov.func(b.model, df[-k, , drop = FALSE], exp)
+    }
+
     ## The function.
     b.func <- b.obj[[1]]
     ## Number of parameters.
     n.b.par <- b.obj[[2]]
-
     ###
     #n.b.par <- 2
     
@@ -97,20 +104,33 @@ fit.popan <- function(captlist, model.list = NULL, group.pars = NULL, group.effe
 
 
     ## Start values for b parameters.
-    b.startvec <- numeric(sum(sapply(b.par.names, length)))
-    names(b.startvec) <- c(b.par.names, recursive = TRUE)
-    b.prefix <- sapply(strsplit(names(b.startvec), "[.]"), function(x) x[1])
-    b.startvec[substr(b.prefix, nchar(b.prefix), nchar(b.prefix)) == 1] <- log(0.1)
-    
+    if (b.occ){
+        b.startvec <- rep(0.1, sum(sapply(b.par.names, length)))
+        names(b.startvec) <- c(b.par.names, recursive = TRUE)
+        b.lowervec <- rep(1e-6, length(b.startvec))
+        b.uppervec <- rep(Inf, length(b.startvec))
+    } else {
+        b.startvec <- numeric(sum(sapply(b.par.names, length)))
+        names(b.startvec) <- c(b.par.names, recursive = TRUE)
+        b.prefix <- sapply(strsplit(names(b.startvec), "[.]"), function(x) x[1])
+        b.startvec[substr(b.prefix, nchar(b.prefix), nchar(b.prefix)) == 1] <- log(0.1)
+        b.lowervec <- rep(-Inf, length(b.startvec))
+        b.uppervec <- rep(Inf, length(b.startvec))
+    }
     ## Doing all the same stuff with phi.
     ## Model for survival parameters.
     phi.model <- model.list[["phi"]]
     if (is.null(phi.model)){
         phi.model <- ~ occasion
     }
-    ## Creating a function to model survival parameters. Note that it
-    ## doesn't use the covariates for the final occasion.
-    phi.obj <- cov.func(phi.model, df[-k, , drop = FALSE], plogis)
+    phi.occ <- FALSE #as.character(phi.model)[-1] == "occasion" & (!group.effect[["phi"]])
+    if (phi.occ){
+        phi.obj <- cov.func.occ(k - 1, lower = 0, upper = 1)
+    } else {
+        ## Creating a function to model survival parameters. Note that it
+        ## doesn't use the covariates for the final occasion.
+        phi.obj <- cov.func(phi.model, df[-k, , drop = FALSE], plogis)
+    }
     ## The function.
     phi.func <- phi.obj[[1]]
     ## Number of parameters.
@@ -142,19 +162,33 @@ fit.popan <- function(captlist, model.list = NULL, group.pars = NULL, group.effe
         phi.par.names[[2]][1] <- "phi1.2"
     }
     ## Start values for phi parameters.
-    phi.startvec <- numeric(sum(sapply(phi.par.names, length)))
-    names(phi.startvec) <- c(phi.par.names, recursive = TRUE)
-    phi.prefix <- sapply(strsplit(names(phi.startvec), "[.]"), function(x) x[1])
-    phi.startvec[substr(phi.prefix, nchar(phi.prefix), nchar(phi.prefix)) == 1] <- qlogis(0.9)
-    
+    if (phi.occ){
+        phi.startvec <- rep(0.8, sum(sapply(phi.par.names, length)))
+        names(phi.startvec) <- c(phi.par.names, recursive = TRUE)
+        phi.lowervec <- rep(1e-6, length(phi.startvec))
+        phi.uppervec <- rep(1, length(phi.startvec))
+    } else {
+        phi.startvec <- numeric(sum(sapply(phi.par.names, length)))
+        names(phi.startvec) <- c(phi.par.names, recursive = TRUE)
+        phi.prefix <- sapply(strsplit(names(phi.startvec), "[.]"), function(x) x[1])
+        phi.startvec[substr(phi.prefix, nchar(phi.prefix), nchar(phi.prefix)) == 1] <- qlogis(0.9)
+        phi.lowervec <- rep(-Inf, length(phi.startvec))
+        phi.uppervec <- rep(Inf, length(phi.startvec))
+    }
+        
     ## Doing all the same stuff with ptr.
     ## Model for survival parameters.
     ptr.model <- model.list[["ptr"]]
     if (is.null(ptr.model)){
         ptr.model <- ~ occasion
     }
-    ## Creating a function to model transience probability parameters.
-    ptr.obj <- cov.func(ptr.model, df[-k, , drop = FALSE], plogis)
+    ptr.occ <- FALSE#(as.character(ptr.model)[-1] == "occasion") & (!group.effect[["ptr"]])
+    if (ptr.occ){
+        ptr.obj <- cov.func.occ(k - 1, lower = 0, upper = 1)
+    } else {
+        ## Creating a function to model transience probability parameters.
+        ptr.obj <- cov.func(ptr.model, df[-k, , drop = FALSE], plogis)
+    }
     ## The function.
     ptr.func <- ptr.obj[[1]]
     ## Number of parameters.
@@ -186,11 +220,19 @@ fit.popan <- function(captlist, model.list = NULL, group.pars = NULL, group.effe
         ptr.par.names[[2]][1] <- "ptr1.2"
     }
     ## Start values for p parameters.
-    ptr.startvec <- numeric(sum(sapply(ptr.par.names, length)))
-    names(ptr.startvec) <- c(ptr.par.names, recursive = TRUE)
-    ptr.prefix <- sapply(strsplit(names(ptr.startvec), "[.]"), function(x) x[1])
-    ptr.startvec[substr(ptr.prefix, nchar(ptr.prefix), nchar(ptr.prefix)) == 1] <- qlogis(0.1)
-    
+    if (ptr.occ){
+        ptr.startvec <- rep(0.3, sum(sapply(ptr.par.names, length)))
+        names(ptr.startvec) <- c(ptr.par.names, recursive = TRUE)
+        ptr.lowervec <- rep(1e-6, length(ptr.startvec))
+        ptr.uppervec <- rep(1, length(ptr.startvec))
+    } else {
+        ptr.startvec <- numeric(sum(sapply(ptr.par.names, length)))
+        names(ptr.startvec) <- c(ptr.par.names, recursive = TRUE)
+        ptr.prefix <- sapply(strsplit(names(ptr.startvec), "[.]"), function(x) x[1])
+        ptr.startvec[substr(ptr.prefix, nchar(ptr.prefix), nchar(ptr.prefix)) == 1] <- qlogis(0.1)
+        ptr.lowervec <- rep(-Inf, length(ptr.startvec))
+        ptr.uppervec <- rep(Inf, length(ptr.startvec))
+    }
 
     ## Doing all the same stuff with p.
     ## Model for survival parameters.
@@ -198,8 +240,13 @@ fit.popan <- function(captlist, model.list = NULL, group.pars = NULL, group.effe
     if (is.null(p.model)){
         p.model <- ~ occasion
     }
-    ## Creating a function to model detection probability parameters.
-    p.obj <- cov.func(p.model, df, plogis)
+    p.occ <- FALSE #(as.character(p.model)[-1] == "occasion") & (!group.effect[["p"]])
+    if (p.occ){
+        p.obj <- cov.func.occ(k, lower = 0, upper = 1)
+    } else {
+        ## Creating a function to model detection probability parameters.
+        p.obj <- cov.func(p.model, df, plogis)
+    }
     ## The function.
     p.func <- p.obj[[1]]
     ## Number of parameters.
@@ -230,13 +277,24 @@ fit.popan <- function(captlist, model.list = NULL, group.pars = NULL, group.effe
         n.p.par <- n.p.par + 1
         p.par.names[[2]][1] <- "p1.2"
     }
-    ## Start values for p parameters.
-    p.startvec <- numeric(sum(sapply(p.par.names, length)))
-    names(p.startvec) <- c(p.par.names, recursive = TRUE)
-    p.startvec[1] <- qlogis(0.5)
+    if (p.occ){
+        p.startvec <- rep(0.5, sum(sapply(p.par.names, length)))
+        names(p.startvec) <- c(p.par.names, recursive = TRUE)
+        p.lowervec <- rep(1e-6, length(p.startvec))
+        p.uppervec <- rep(1, length(p.startvec))
+    } else {
+        ## Start values for p parameters.
+        p.startvec <- numeric(sum(sapply(p.par.names, length)))
+        names(p.startvec) <- c(p.par.names, recursive = TRUE)
+        p.startvec[1] <- qlogis(0.5)
+        p.lowervec <- rep(-Inf, length(p.startvec))
+        p.uppervec <- rep(Inf, length(p.startvec))
+    }
     
     ## Start values for the N parameters.
     Ns.startvec <- 3*sapply(captlist, nrow)
+    Ns.lowervec <- sapply(captlist, nrow)
+    Ns.uppervec <- rep(Inf, n.groups)
     names(Ns.startvec) <- paste("Ns", 1:n.groups, sep = ".")
     ## Creating model object.
     model <- list()
@@ -244,13 +302,16 @@ fit.popan <- function(captlist, model.list = NULL, group.pars = NULL, group.effe
         model[[i]] <- c(paste0("Ns.", i), b.par.names[[i]], phi.par.names[[i]], p.par.names[[i]], ptr.par.names[[i]][transience])
     }
     names(model) <- paste0("gp", 1:n.groups)
-    ## Putting together the start values.
+    ## Putting together the start values and bounds.
     startvec <- c(Ns.startvec, b.startvec, phi.startvec, p.startvec, ptr.startvec[transience])
+    lowervec <- c(Ns.lowervec, b.lowervec, phi.lowervec, p.lowervec, ptr.lowervec[transience])
+    uppervec <- c(Ns.uppervec, b.uppervec, phi.uppervec, p.uppervec, ptr.uppervec[transience])
+    names(lowervec) <- names(uppervec) <- names(startvec)
     ## Fitting the model.
     out <- popanGeneral.covs.fit.func(captlist, k = k, birthfunc = b.func, phifunc = phi.func,
                                       pfunc = p.func, ptrfunc = ptr.func, use.nlm = use.nlm,
-                                      model = model,
-                                      transience = transience, startvec = startvec, printit = printit)
+                                      model = model, transience = transience, startvec = startvec,
+                                      lowervec = lowervec, uppervec = uppervec, printit = printit)
     out$args <- args
     out
 }
