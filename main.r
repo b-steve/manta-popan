@@ -707,13 +707,17 @@ manta.ma.wrap <- function(captlist, mei, transience = FALSE, model.average = TRU
                         m.p  <- ~ occasion
                     }
                 }
-                for (model.ptr in (1:3)[c(TRUE, transience, transience)]){
+                for (model.ptr in (1:3)[c(TRUE, rep(transience, 2))]){
                     if (model.ptr == 1){
                         group.ptr.set <- 3
                         m.ptr <- NULL
                     } else if (model.ptr == 2){
                         group.ptr.set <- 2:3
-                        m.ptr  <- ~ occasion
+                        if (model.ptr == 2){
+                            m.ptr  <- ~ mei
+                        } else if (model.ptr == 3){
+                            m.ptr <- s(time, k = 4)
+                        }
                     }
                     for (group.b in group.b.set){
                         ## Parameter grouping for recruitment.
