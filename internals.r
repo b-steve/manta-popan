@@ -804,7 +804,7 @@ popanGeneral.covs.fit.func <- function(dat, k=ncol(dat[[1]]), birthfunc = immigr
         objective = negloglik.func,
         lower = lowervec,
         upper = uppervec,
-        control=list(iter.max=1000, eval.max=5000))
+        control=list(iter.max=1e5, eval.max=1e5, rel.tol = 1e-15))
     pents <- negloglik.func(pars = fit$par, out = "pentvec")
     rownames(pents) <- NULL
     phis <- negloglik.func(pars = fit$par, out = "phivec")
