@@ -33,7 +33,7 @@
 ##               determine detection probabilities. If FALSE, then
 ##               the coefficent for x is separately estimated for each
 ##               group.
-fit.popan <- function(captlist, model.list = NULL, group.pars = NULL, group.effect = NULL, df = NULL, printit = FALSE){
+fit.popan <- function(captlist, model.list = NULL, group.pars = NULL, group.effect = NULL, df = NULL, random.start = FALSE, printit = FALSE){
     ## Saving function arguments.
     args <- list(captlist = captlist, model.list = model.list,
                  group.pars = group.pars, group.effect = group.effect,
@@ -105,7 +105,11 @@ fit.popan <- function(captlist, model.list = NULL, group.pars = NULL, group.effe
 
     ## Start values for b parameters.
     if (b.occ){
-        b.startvec <- rep(0.1, sum(sapply(b.par.names, length)))
+        if (random.start){
+            b.startvec <- runif(sum(sapply(b.par.names, length)), 0.05, 0.4)
+        } else {
+            b.startvec <- rep(0.1, sum(sapply(b.par.names, length)))
+        }
         names(b.startvec) <- c(b.par.names, recursive = TRUE)
         b.lowervec <- rep(1e-6, length(b.startvec))
         b.uppervec <- rep(Inf, length(b.startvec))
@@ -113,7 +117,12 @@ fit.popan <- function(captlist, model.list = NULL, group.pars = NULL, group.effe
         b.startvec <- numeric(sum(sapply(b.par.names, length)))
         names(b.startvec) <- c(b.par.names, recursive = TRUE)
         b.prefix <- sapply(strsplit(names(b.startvec), "[.]"), function(x) x[1])
-        b.startvec[substr(b.prefix, nchar(b.prefix), nchar(b.prefix)) == 1] <- log(0.1)
+        if (random.start){
+            b.startvec[substr(b.prefix, nchar(b.prefix), nchar(b.prefix)) == 1] <- log(runif(1, 0.05, 0.4))
+            b.startvec[substr(b.prefix, nchar(b.prefix), nchar(b.prefix)) != 1] <- runif(sum(substr(b.prefix, nchar(b.prefix), nchar(b.prefix)) != 1), -5, 5)
+        } else {
+            b.startvec[substr(b.prefix, nchar(b.prefix), nchar(b.prefix)) == 1] <- log(0.1)
+        }
         b.lowervec <- rep(-Inf, length(b.startvec))
         b.uppervec <- rep(Inf, length(b.startvec))
     }
@@ -171,7 +180,12 @@ fit.popan <- function(captlist, model.list = NULL, group.pars = NULL, group.effe
         phi.startvec <- numeric(sum(sapply(phi.par.names, length)))
         names(phi.startvec) <- c(phi.par.names, recursive = TRUE)
         phi.prefix <- sapply(strsplit(names(phi.startvec), "[.]"), function(x) x[1])
-        phi.startvec[substr(phi.prefix, nchar(phi.prefix), nchar(phi.prefix)) == 1] <- qlogis(0.9)
+        if (random.start){
+            phi.startvec[substr(phi.prefix, nchar(phi.prefix), nchar(phi.prefix)) == 1] <- qlogis(runif(1, 0.7, 0.95))
+            phi.startvec[substr(phi.prefix, nchar(phi.prefix), nchar(phi.prefix)) != 1] <- runif(sum(substr(phi.prefix, nchar(phi.prefix), nchar(phi.prefix)) != 1), -5, 5)
+        } else {
+            phi.startvec[substr(phi.prefix, nchar(phi.prefix), nchar(phi.prefix)) == 1] <- qlogis(0.9)
+        }
         phi.lowervec <- rep(-Inf, length(phi.startvec))
         phi.uppervec <- rep(Inf, length(phi.startvec))
     }
@@ -229,7 +243,12 @@ fit.popan <- function(captlist, model.list = NULL, group.pars = NULL, group.effe
         ptr.startvec <- numeric(sum(sapply(ptr.par.names, length)))
         names(ptr.startvec) <- c(ptr.par.names, recursive = TRUE)
         ptr.prefix <- sapply(strsplit(names(ptr.startvec), "[.]"), function(x) x[1])
-        ptr.startvec[substr(ptr.prefix, nchar(ptr.prefix), nchar(ptr.prefix)) == 1] <- qlogis(0.1)
+        if (random.start){
+            ptr.startvec[substr(ptr.prefix, nchar(ptr.prefix), nchar(ptr.prefix)) == 1] <- qlogis(runif(1, 0.05, 0.4))
+            ptr.startvec[substr(ptr.prefix, nchar(ptr.prefix), nchar(ptr.prefix)) != 1] <- runif(sum(substr(ptr.prefix, nchar(ptr.prefix), nchar(ptr.prefix)) != 1), -5, 5)
+        } else {
+            ptr.startvec[substr(ptr.prefix, nchar(ptr.prefix), nchar(ptr.prefix)) == 1] <- qlogis(0.1)
+        }
         ptr.lowervec <- rep(-Inf, length(ptr.startvec))
         ptr.uppervec <- rep(Inf, length(ptr.startvec))
     }
@@ -286,7 +305,13 @@ fit.popan <- function(captlist, model.list = NULL, group.pars = NULL, group.effe
         ## Start values for p parameters.
         p.startvec <- numeric(sum(sapply(p.par.names, length)))
         names(p.startvec) <- c(p.par.names, recursive = TRUE)
-        p.startvec[1] <- qlogis(0.5)
+        p.prefix <- sapply(strsplit(names(p.startvec), "[.]"), function(x) x[1])
+        if (random.start){
+            p.startvec[substr(p.prefix, nchar(p.prefix), nchar(p.prefix)) == 1] <- qlogis(runif(1, 0.05, 0.7))
+            p.startvec[substr(p.prefix, nchar(p.prefix), nchar(p.prefix)) != 1] <- runif(sum(substr(p.prefix, nchar(p.prefix), nchar(p.prefix)) != 1), -5, 5)
+        } else {
+            p.startvec[substr(p.prefix, nchar(p.prefix), nchar(p.prefix)) == 1] <- qlogis(0.5)
+        }
         p.lowervec <- rep(-Inf, length(p.startvec))
         p.uppervec <- rep(Inf, length(p.startvec))
     }
@@ -309,7 +334,7 @@ fit.popan <- function(captlist, model.list = NULL, group.pars = NULL, group.effe
     names(lowervec) <- names(uppervec) <- names(startvec)
     ## Fitting the model.
     out <- popanGeneral.covs.fit.func(captlist, k = k, birthfunc = b.func, phifunc = phi.func,
-                                      pfunc = p.func, ptrfunc = ptr.func, use.nlm = use.nlm,
+                                      pfunc = p.func, ptrfunc = ptr.func,
                                       model = model, transience = transience, startvec = startvec,
                                       lowervec = lowervec, uppervec = uppervec, printit = printit)
     out$args <- args
