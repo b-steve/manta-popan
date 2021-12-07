@@ -39,7 +39,7 @@ fit.popan <- function(captlist, model.list = NULL, group.pars = NULL, group.effe
                  group.pars = group.pars, group.effect = group.effect,
                  df = df, printit = printit)
     ## Detecting whether or not we are fitting a transience model.
-    transience <- any(names(model.list) == "ptr")
+    transience <- !is.null(model.list$ptr)
     ## If captlist is a matrix, turn it into a list for consistency.
     if (!is.list(captlist)){
         captlist <- list(captlist)
@@ -638,7 +638,10 @@ summary.ma.popan <- function(fit.ma, method = "best", pars = "ENs", groups = NUL
 ##    - So in total there are 8 possible submodels for 3 different
 ##      demographic parameters, so the total number of candidate
 ##      models is 8^3 = 512
-## - Carries out a model averaging procedure using a bootstrap.
+## - If the argument transience is TRUE, then it will also consider
+##   models with and without transience.
+## - If the argument model.average is TRUE, then it will also arry
+##   out a model averaging procedure using a bootstrap.
 
 ## Arguments:
 ## captlist: A list with components for each group. Each component
@@ -657,7 +660,7 @@ summary.ma.popan <- function(fit.ma, method = "best", pars = "ENs", groups = NUL
 ## n.cores: The number of cores for parallel computing.
 ## verbose: Logical. If TRUE, progress is printed to the console.
 
-manta.ma.wrap <- function(captlist, mei, chat = 1, n.boots = 100, AIC.cutoff = 10, n.cores = 1, verbose = TRUE){
+manta.ma.wrap <- function(captlist, mei, transience = FALSE, model.average = TRUE, chat = 1, n.boots = 100, AIC.cutoff = 10, n.cores = 1, verbose = TRUE){
     ## Turning mei into a data frame because that's what the fitting function needs.
     mei <- data.frame(mei)
     ## The object args is a list, where each component corresponds to a
@@ -704,54 +707,79 @@ manta.ma.wrap <- function(captlist, mei, chat = 1, n.boots = 100, AIC.cutoff = 1
                         m.p  <- ~ occasion
                     }
                 }
-                for (group.b in group.b.set){
-                    ## Parameter grouping for recruitment.
-                    if (group.b == 1){
-                        gp.b <- FALSE
-                        ge.b <- FALSE
-                    } else if (group.b == 2){
-                        gp.b <- TRUE
-                        ge.b <- TRUE
-                    } else if (group.b == 3){
-                        gp.b <- TRUE
-                        ge.b <- FALSE
+                for (model.ptr in (1:3)[c(TRUE, transience, transience)]){
+                    if (model.ptr == 1){
+                        group.ptr.set <- 3
+                        m.ptr <- NULL
+                    } else if (model.ptr == 2){
+                        group.ptr.set <- 2:3
+                        m.ptr  <- ~ occasion
                     }
-                    for (group.phi in group.phi.set){
-                        ## Parameter grouping for survival.
-                        if (group.phi == 1){
-                            gp.phi <- FALSE
-                            ge.phi <- FALSE
-                        } else if (group.phi == 2){
-                            gp.phi <- TRUE
-                            ge.phi <- TRUE
-                        } else if (group.phi == 3){
-                            gp.phi <- TRUE
-                            ge.phi <- FALSE
+                    for (group.b in group.b.set){
+                        ## Parameter grouping for recruitment.
+                        if (group.b == 1){
+                            gp.b <- FALSE
+                            ge.b <- FALSE
+                        } else if (group.b == 2){
+                            gp.b <- TRUE
+                            ge.b <- TRUE
+                        } else if (group.b == 3){
+                            gp.b <- TRUE
+                            ge.b <- FALSE
                         }
-                        for (group.p in group.p.set){
-                            ## Parameter grouping for detection.
-                            if (group.p == 1){
-                                gp.p <- FALSE
-                                ge.p <- FALSE
-                            } else if (group.p == 2){
-                                gp.p <- TRUE
-                                ge.p <- TRUE
-                            } else if (group.p == 3){
-                                gp.p <- TRUE
-                                ge.p <- FALSE
+                        for (group.phi in group.phi.set){
+                            ## Parameter grouping for survival.
+                            if (group.phi == 1){
+                                gp.phi <- FALSE
+                                ge.phi <- FALSE
+                            } else if (group.phi == 2){
+                                gp.phi <- TRUE
+                                ge.phi <- TRUE
+                            } else if (group.phi == 3){
+                                gp.phi <- TRUE
+                                ge.phi <- FALSE
                             }
-                            args[[k]] <- list(captlist,
-                                              model.list = list(b = m.b,
-                                                                phi = m.phi,
-                                                                p = m.p),
-                                              group.pars = list(b = gp.b,
-                                                                phi = gp.phi,
-                                                                p = gp.p),
-                                              group.effect = list(b = ge.b,
-                                                                  phi = ge.phi,
-                                                                  p = ge.p),
-                                              df = covs)
-                            k <- k + 1        
+                            for (group.p in group.p.set){
+                                ## Parameter grouping for detection.
+                                if (group.p == 1){
+                                    gp.p <- FALSE
+                                    ge.p <- FALSE
+                                } else if (group.p == 2){
+                                    gp.p <- TRUE
+                                    ge.p <- TRUE
+                                } else if (group.p == 3){
+                                    gp.p <- TRUE
+                                    ge.p <- FALSE
+                                }
+                                for (group.ptr in group.ptr.set){
+                                    ## Parameter grouping for transience.
+                                    if (group.ptr == 1){
+                                        gp.ptr <- FALSE
+                                        ge.ptr <- FALSE
+                                    } else if (group.ptr == 2){
+                                        gp.ptr <- TRUE
+                                        ge.ptr <- TRUE
+                                    } else if (group.ptr == 3){
+                                        gp.ptr <- TRUE
+                                        ge.ptr <- FALSE
+                                    } 
+                                }
+                                args[[k]] <- list(captlist,
+                                                  model.list = list(b = m.b,
+                                                                    phi = m.phi,
+                                                                    p = m.p,
+                                                                    ptr = m.ptr),
+                                                  group.pars = list(b = gp.b,
+                                                                    phi = gp.phi,
+                                                                    p = gp.p,
+                                                                    ptr = gp.ptr),
+                                                  group.effect = list(b = ge.b,
+                                                                      phi = ge.phi,
+                                                                      p = ge.p,
+                                                                      ptr = ge.ptr),
+                                                  df = covs)
+                                k <- k + 1        
+                            }
                         }
                     }
                 }
