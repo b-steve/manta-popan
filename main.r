@@ -33,7 +33,7 @@
 ##               determine detection probabilities. If FALSE, then
 ##               the coefficent for x is separately estimated for each
 ##               group.
-fit.popan <- function(captlist, model.list = NULL, group.pars = NULL, group.effect = NULL, df = NULL, printit = FALSE, use.nlm = TRUE){
+fit.popan <- function(captlist, model.list = NULL, group.pars = NULL, group.effect = NULL, df = NULL, printit = FALSE){
     ## Saving function arguments.
     args <- list(captlist = captlist, model.list = model.list,
                  group.pars = group.pars, group.effect = group.effect,

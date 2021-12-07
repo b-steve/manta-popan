@@ -422,7 +422,7 @@ plot.popan <- function(object, ...){
 }
 
 popanGeneral.covs.fit.func <- function(dat, k=ncol(dat[[1]]), birthfunc = immigrationElNino.func, phifunc, pfunc,
-                                       ptrfunc, use.nlm = TRUE,
+                                       ptrfunc,
                                        model=list(
                                            gp1=c("Ns.1", "b1.1", "b2.1", rep("phi1.1", k-1), paste0("p", 1:k, ".1")),
                                            gp2=c("Ns.2", "b1.1", "b2.1", rep("phi1.1", k-1), paste0("p", 1:k, ".2"))),
