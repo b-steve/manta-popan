@@ -33,172 +33,212 @@
 ##               determine detection probabilities. If FALSE, then
 ##               the coefficent for x is separately estimated for each
 ##               group.
-fit.popan <- function(captlist, model.list = NULL, group.pars = NULL, group.effect = NULL, df = NULL, printit = FALSE){
+## random.start: Either TRUE or FALSE. If TRUE, then random start
+##               values are used.
+## n.attempts: Number of attempts to fit the model using randomly
+##             selected start values.
+fit.popan <- function(captlist, model.list = NULL, group.pars = NULL, group.effect = NULL, df = NULL, printit = FALSE, random.start = FALSE, n.attempts = 1){
     ## Saving function arguments.
     args <- list(captlist = captlist, model.list = model.list,
                  group.pars = group.pars, group.effect = group.effect,
-                 df = df, printit = printit)
-    ## If captlist is a matrix, turn it into a list for consistency.
-    if (!is.list(captlist)){
-        captlist <- list(captlist)
-    }
-    ## Number of different groups.
-    n.groups <- length(captlist)
-    ## Number of occasions (needs to be the same across groups).
-    k  <- ncol(captlist[[1]])
-    # Setting up data frame.
-    if (is.null(df)){
-        df <- data.frame(occasion = as.factor(1:k))
+                 df = df, printit = printit, random.start = random.start,
+                 n.attempts = n.attempts)
+    if (n.attempts == 1){
+        random.scale <- 1
+        ## If captlist is a matrix, turn it into a list for consistency.
+        if (!is.list(captlist)){
+            captlist <- list(captlist)
+        }
+        ## Number of different groups.
+        n.groups <- length(captlist)
+        ## Number of occasions (needs to be the same across groups).
+        k  <- ncol(captlist[[1]])
+                                        # Setting up data frame.
+        if (is.null(df)){
+            df <- data.frame(occasion = as.factor(1:k))
+        } else {
+            df$occasion <- as.factor(1:k)
+        }
+        ## Model for birth parameters.
+        b.model <- model.list[["b"]]
+        if (is.null(b.model)){
+            b.model <- ~ occasion
+        }
+        ## Creating a function to model birth parameters. Note that it
+        ## doesn't use the covariates for the final occasion.
+        b.obj <- cov.func(b.model, df[-k, , drop = FALSE], exp)
+        ## The function.
+        b.func <- b.obj[[1]]
+        ## Number of parameters.
+        n.b.par <- b.obj[[2]]
+        
+###
+                                        #n.b.par <- 2
+        
+        ## Setting defaults so Rachel's function knows how many parameters there are.
+        formals(b.func)$pars <- rep(0, n.b.par)
+        ## Parameter names for the groups.
+        b.par.names <- vector(mode = "list", length = n.groups)
+        ## Logical value for whether or not to share b parameters across groups.
+        b.group <- group.pars[["b"]]
+        if (is.null(b.group)){
+            b.group <- TRUE
+        }
+        for (i in 1:n.groups){
+            b.par.names[[i]] <- paste0("b", 1:n.b.par, ".", ifelse(b.group, 1, i))
+        }
+        ## Logical value for whether or not to put a group effect on b.
+        b.effect <- group.effect[["b"]]
+        if (is.null(b.effect)){
+            b.effect <- FALSE
+        }
+        ## Error if we have both effect and not grouping.
+        if (!b.group & b.effect){
+            stop("You can't fit a group effect on parameter b if effects are not grouped.")
+        }
+        ## Put an additive group effect.
+        if (group.effect[["b"]]){
+            n.b.par <- n.b.par + 1
+            b.par.names[[2]][1] <- "b1.2"
+        }
+        
+        
+        ## Start values for b parameters.
+        b.startvec <- numeric(sum(sapply(b.par.names, length)))
+        names(b.startvec) <- c(b.par.names, recursive = TRUE)
+        if (random.start){
+            b.startvec[(substr(names(b.startvec), 1, 3) == "b1.")] <-
+                rnorm(sum(substr(names(b.startvec), 1, 3) == "b1."), log(0.5), 0.2*random.scale)
+            b.startvec[(substr(names(b.startvec), 1, 3) != "b1.")] <-
+                rnorm(sum(substr(names(b.startvec), 1, 3) != "b1."), 0, 0.25*random.scale)
+        }
+        ## Doing all the same stuff with phi.
+        ## Model for survival parameters.
+        phi.model <- model.list[["phi"]]
+        if (is.null(phi.model)){
+            phi.model <- ~ occasion
+        }
+        ## Creating a function to model survival parameters. Note that it
+        ## doesn't use the covariates for the final occasion.
+        phi.obj <- cov.func(phi.model, df[-k, , drop = FALSE], plogis)
+        ## The function.
+        phi.func <- phi.obj[[1]]
+        ## Number of parameters.
+        n.phi.par <- phi.obj[[2]]
+        ## Setting defaults so Rachel's function knows how many parameters there are.
+        formals(phi.func)$pars <- rep(0, n.phi.par)
+        ## Parameter names for the groups.
+        phi.par.names <- vector(mode = "list", length = n.groups)
+        ## Logical value for whether or not to share phi parameters across groups.
+        phi.group <- group.pars[["phi"]]
+        if (is.null(phi.group)){
+            phi.group <- TRUE
+        }
+        for (i in 1:n.groups){
+            phi.par.names[[i]] <- paste0("phi", 1:n.phi.par, ".", ifelse(phi.group, 1, i))
+        }
+        ## Logical value for whether or not to put a group effect on phi.
+        phi.effect <- group.effect[["phi"]]
+        if (is.null(phi.effect)){
+            phi.effect <- FALSE
+        }
+        ## Error if we have both effect and not grouping.
+        if (!phi.group & phi.effect){
+            stop("You can't fit a group effect on parameter phi if effects are not grouped.")
+        }
+        ## Put an additive group effect.
+        if (phi.effect){
+            n.phi.par <- n.phi.par + 1
+            phi.par.names[[2]][1] <- "phi1.2"
+        }
+        ## Start values for phi parameters.
+        phi.startvec <- numeric(sum(sapply(phi.par.names, length)))
+        names(phi.startvec) <- c(phi.par.names, recursive = TRUE)
+        
+        if (random.start){
+            phi.startvec[(substr(names(phi.startvec), 1, 5) == "phi1.")] <-
+                rnorm(sum(substr(names(phi.startvec), 1, 5) == "phi1."), qlogis(0.8), 0.5*random.scale)
+            phi.startvec[(substr(names(phi.startvec), 1, 5) != "phi1.")] <-
+                rnorm(sum(substr(names(phi.startvec), 1, 5) != "phi1."), 0, 0.25*random.scale)
+        }
+        ## Doing all the same stuff with p.
+        ## Model for survival parameters.
+        p.model <- model.list[["p"]]
+        if (is.null(p.model)){
+            p.model <- ~ occasion
+        }
+        ## Creating a function to model survival parameters.
+        p.obj <- cov.func(p.model, df, plogis)
+        ## The function.
+        p.func <- p.obj[[1]]
+        ## Number of parameters.
+        n.p.par <- p.obj[[2]]
+        ## Setting defaults so Rachel's function knows how many parameters there are.
+        formals(p.func)$pars <- rep(0, n.p.par)
+        ## Parameter names for the groups.
+        p.par.names <- vector(mode = "list", length = n.groups)
+        ## Logical value for whether or not to share p parameters across groups.
+        p.group <- group.pars[["p"]]
+        if (is.null(p.group)){
+            p.group <- TRUE
+        }
+        for (i in 1:n.groups){
+            p.par.names[[i]] <- paste0("p", 1:n.p.par, ".", ifelse(p.group, 1, i))
+        }
+        ## Logical value for whether or not to put a group effect on p.
+        p.effect <- group.effect[["p"]]
+        if (is.null(p.effect)){
+            p.effect <- FALSE
+        }
+        ## Error if we have both effect and not grouping.
+        if (!p.group & p.effect){
+            stop("You can't fit a group effect on parameter p if effects are not grouped.")
+        }
+        ## Put an additive group effect.
+        if (group.effect[["p"]]){
+            n.p.par <- n.p.par + 1
+            p.par.names[[2]][1] <- "p1.2"
+        }
+        ## Start values for p parameters.
+        p.startvec <- numeric(sum(sapply(p.par.names, length)))
+        names(p.startvec) <- c(p.par.names, recursive = TRUE)
+        p.startvec[(substr(names(p.startvec), 1, 3) == "p1.")] <- qlogis(0.1)
+        if (random.start){
+            p.startvec[(substr(names(p.startvec), 1, 3) == "p1.")] <-
+                rnorm(sum(substr(names(p.startvec), 1, 3) == "p1."), qlogis(0.1), 0.5*random.scale)
+            p.startvec[(substr(names(p.startvec), 1, 3) != "p1.")] <-
+                rnorm(sum(substr(names(p.startvec), 1, 3) != "p1."), 0, 0.25*random.scale)
+        }
+        ## Start values for the N parameters.
+        Ns.startvec <- c(Ns.1 = 1000, Ns.2 = 1200)
+        ## Creating model object.
+        model <- list()
+        for (i in 1:n.groups){
+            model[[i]] <- c(paste0("Ns.", i), b.par.names[[i]], phi.par.names[[i]], p.par.names[[i]])
+        }
+        names(model) <- paste0("gp", 1:n.groups)
+        ## Putting together the start values.
+        cat("b:", b.startvec, "\n")
+        cat("p:", p.startvec, "\n")
+        cat("phi:", phi.startvec, "\n")
+        startvec <- c(Ns.startvec, b.startvec, phi.startvec, p.startvec)
+        ## Fitting the model.
+        out <- popanGeneral.covs.fit.func(captlist, k = k, birthfunc = b.func, phifunc = phi.func,
+                                          pfunc = p.func, model = model, startvec = startvec,
+                                          printit = printit)
+        out$args <- args
     } else {
-        df$occasion <- as.factor(1:k)
+        all.out <- vector(mode = "list", length = n.attempts)
+        args$random.start <- TRUE
+        args$n.attempts <- 1
+        ## Could parallelise this.
+        for (i in 1:n.attempts){
+            all.out[[i]] <- do.call("fit.popan", args)
+        }
+        lls <- sapply(all.out, function(x) -x$fit$objective)
+        out <- all.out[[which(lls == max(lls))[1]]]
+        out$all.lls <- lls
     }
-    ## Model for birth parameters.
-    b.model <- model.list[["b"]]
-    if (is.null(b.model)){
-        b.model <- ~ occasion
-    }
-    ## Creating a function to model birth parameters. Note that it
-    ## doesn't use the covariates for the final occasion.
-    b.obj <- cov.func(b.model, df[-k, , drop = FALSE], exp)
-    ## The function.
-    b.func <- b.obj[[1]]
-    ## Number of parameters.
-    n.b.par <- b.obj[[2]]
-
-    ###
-    #n.b.par <- 2
-    
-    ## Setting defaults so Rachel's function knows how many parameters there are.
-    formals(b.func)$pars <- rep(0, n.b.par)
-    ## Parameter names for the groups.
-    b.par.names <- vector(mode = "list", length = n.groups)
-    ## Logical value for whether or not to share b parameters across groups.
-    b.group <- group.pars[["b"]]
-    if (is.null(b.group)){
-        b.group <- TRUE
-    }
-    for (i in 1:n.groups){
-        b.par.names[[i]] <- paste0("b", 1:n.b.par, ".", ifelse(b.group, 1, i))
-    }
-    ## Logical value for whether or not to put a group effect on b.
-    b.effect <- group.effect[["b"]]
-    if (is.null(b.effect)){
-        b.effect <- FALSE
-    }
-    ## Error if we have both effect and not grouping.
-    if (!b.group & b.effect){
-        stop("You can't fit a group effect on parameter b if effects are not grouped.")
-    }
-    ## Put an additive group effect.
-    if (group.effect[["b"]]){
-        n.b.par <- n.b.par + 1
-        b.par.names[[2]][1] <- "b1.2"
-    }
-
-
-    ## Start values for b parameters.
-    b.startvec <- numeric(sum(sapply(b.par.names, length)))
-    names(b.startvec) <- c(b.par.names, recursive = TRUE)
-    ## Doing all the same stuff with phi.
-    ## Model for survival parameters.
-    phi.model <- model.list[["phi"]]
-    if (is.null(phi.model)){
-        phi.model <- ~ occasion
-    }
-    ## Creating a function to model survival parameters. Note that it
-    ## doesn't use the covariates for the final occasion.
-    phi.obj <- cov.func(phi.model, df[-k, , drop = FALSE], plogis)
-    ## The function.
-    phi.func <- phi.obj[[1]]
-    ## Number of parameters.
-    n.phi.par <- phi.obj[[2]]
-    ## Setting defaults so Rachel's function knows how many parameters there are.
-    formals(phi.func)$pars <- rep(0, n.phi.par)
-    ## Parameter names for the groups.
-    phi.par.names <- vector(mode = "list", length = n.groups)
-    ## Logical value for whether or not to share phi parameters across groups.
-    phi.group <- group.pars[["phi"]]
-    if (is.null(phi.group)){
-        phi.group <- TRUE
-    }
-    for (i in 1:n.groups){
-        phi.par.names[[i]] <- paste0("phi", 1:n.phi.par, ".", ifelse(phi.group, 1, i))
-    }
-    ## Logical value for whether or not to put a group effect on phi.
-    phi.effect <- group.effect[["phi"]]
-    if (is.null(phi.effect)){
-        phi.effect <- FALSE
-    }
-    ## Error if we have both effect and not grouping.
-    if (!phi.group & phi.effect){
-        stop("You can't fit a group effect on parameter phi if effects are not grouped.")
-    }
-    ## Put an additive group effect.
-    if (phi.effect){
-        n.phi.par <- n.phi.par + 1
-        phi.par.names[[2]][1] <- "phi1.2"
-    }
-    ## Start values for phi parameters.
-    phi.startvec <- numeric(sum(sapply(phi.par.names, length)))
-    names(phi.startvec) <- c(phi.par.names, recursive = TRUE)
-
-    ## Doing all the same stuff with p.
-    ## Model for survival parameters.
-    p.model <- model.list[["p"]]
-    if (is.null(p.model)){
-        p.model <- ~ occasion
-    }
-    ## Creating a function to model survival parameters.
-    p.obj <- cov.func(p.model, df, plogis)
-    ## The function.
-    p.func <- p.obj[[1]]
-    ## Number of parameters.
-    n.p.par <- p.obj[[2]]
-    ## Setting defaults so Rachel's function knows how many parameters there are.
-    formals(p.func)$pars <- rep(0, n.p.par)
-    ## Parameter names for the groups.
-    p.par.names <- vector(mode = "list", length = n.groups)
-    ## Logical value for whether or not to share p parameters across groups.
-    p.group <- group.pars[["p"]]
-    if (is.null(p.group)){
-        p.group <- TRUE
-    }
-    for (i in 1:n.groups){
-        p.par.names[[i]] <- paste0("p", 1:n.p.par, ".", ifelse(p.group, 1, i))
-    }
-    ## Logical value for whether or not to put a group effect on p.
-    p.effect <- group.effect[["p"]]
-    if (is.null(p.effect)){
-        p.effect <- FALSE
-    }
-    ## Error if we have both effect and not grouping.
-    if (!p.group & p.effect){
-        stop("You can't fit a group effect on parameter p if effects are not grouped.")
-    }
-    ## Put an additive group effect.
-    if (group.effect[["p"]]){
-        n.p.par <- n.p.par + 1
-        p.par.names[[2]][1] <- "p1.2"
-    }
-    ## Start values for p parameters.
-    p.startvec <- numeric(sum(sapply(p.par.names, length)))
-    names(p.startvec) <- c(p.par.names, recursive = TRUE)
-    p.startvec[(substr(names(p.startvec), 1, 2) == "p1")] <- qlogis(0.1)
-    ## Start values for the N parameters.
-    Ns.startvec <- c(Ns.1 = 1000, Ns.2 = 1200)
-    ## Creating model object.
-    model <- list()
-    for (i in 1:n.groups){
-        model[[i]] <- c(paste0("Ns.", i), b.par.names[[i]], phi.par.names[[i]], p.par.names[[i]])
-    }
-    names(model) <- paste0("gp", 1:n.groups)
-    ## Putting together the start values.
-    startvec <- c(Ns.startvec, b.startvec, phi.startvec, p.startvec)
-    ## Fitting the model.
-    out <- popanGeneral.covs.fit.func(captlist, k = k, birthfunc = b.func, phifunc = phi.func,
-                                      pfunc = p.func, model = model, startvec = startvec,
-                                      printit = printit)
-    out$args <- args
     out
 }
 
@@ -611,7 +651,7 @@ manta.ma.wrap <- function(captlist, mei, chat = 1, n.boots = 100, AIC.cutoff = 1
                                               group.effect = list(b = ge.b,
                                                                   phi = ge.phi,
                                                                   p = ge.p),
-                                              df = covs)
+                                              df = mei)
                             k <- k + 1        
                         }
                     }
@@ -627,13 +667,17 @@ manta.ma.wrap <- function(captlist, mei, chat = 1, n.boots = 100, AIC.cutoff = 1
     ## Calculating AICs for all the models.
     fits.AICs <- sapply(fits, AIC, chat = chat)
     ## Keeping only those within the AIC cutoff.
-    best.fits <- fits[fits.AICs - min(fits.AICs) <= 10]
-    ## Carrying out model averaging.
-    if (verbose){
-        message("Bootstrapping...")
+    best.fits <- fits[fits.AICs - min(fits.AICs) <= AIC.cutoff]
+    if (n.boots == 0){
+        fit.ma <- NULL
+    } else {
+        ## Carrying out model averaging.
+        if (verbose){
+            message("Bootstrapping...")
+        }
+        fit.ma <- boot.ma.popan(best.fits, n.boots = n.boots, chat = chat,
+                                n.cores = n.cores, progress.bar = verbose)
     }
-    fit.ma <- boot.ma.popan(best.fits, n.boots = n.boots, chat = chat,
-                            n.cores = n.cores, progress.bar = verbose)
     ## Returning object as output.
     list(best.fits = best.fits, fit.ma = fit.ma)
 }
