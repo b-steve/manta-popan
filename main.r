@@ -37,12 +37,14 @@
 ##               values are used.
 ## n.attempts: Number of attempts to fit the model using randomly
 ##             selected start values.
-fit.popan <- function(captlist, model.list = NULL, group.pars = NULL, group.effect = NULL, df = NULL, printit = FALSE, random.start = FALSE, n.attempts = 1){
+## n.cores: Number of cores for parallel processing when n.cores is
+##          greater than 1.
+fit.popan <- function(captlist, model.list = NULL, group.pars = NULL, group.effect = NULL, df = NULL, printit = FALSE, random.start = FALSE, n.attempts = 1, n.cores = 1){
     ## Saving function arguments.
     args <- list(captlist = captlist, model.list = model.list,
                  group.pars = group.pars, group.effect = group.effect,
                  df = df, printit = printit, random.start = random.start,
-                 n.attempts = n.attempts)
+                 n.attempts = n.attempts, n.cores = n.cores)
     if (n.attempts == 1){
         random.scale <- 1
         ## If captlist is a matrix, turn it into a list for consistency.
@@ -108,9 +110,9 @@ fit.popan <- function(captlist, model.list = NULL, group.pars = NULL, group.effe
         names(b.startvec) <- c(b.par.names, recursive = TRUE)
         if (random.start){
             b.startvec[(substr(names(b.startvec), 1, 3) == "b1.")] <-
-                rnorm(sum(substr(names(b.startvec), 1, 3) == "b1."), log(0.5), 0.2*random.scale)
+                rnorm(sum(substr(names(b.startvec), 1, 3) == "b1."), log(0.25), 0.2*random.scale)
             b.startvec[(substr(names(b.startvec), 1, 3) != "b1.")] <-
-                rnorm(sum(substr(names(b.startvec), 1, 3) != "b1."), 0, 0.25*random.scale)
+                rnorm(sum(substr(names(b.startvec), 1, 3) != "b1."), 0, 0.5*random.scale)
         }
         ## Doing all the same stuff with phi.
         ## Model for survival parameters.
@@ -207,10 +209,10 @@ fit.popan <- function(captlist, model.list = NULL, group.pars = NULL, group.effe
             p.startvec[(substr(names(p.startvec), 1, 3) == "p1.")] <-
                 rnorm(sum(substr(names(p.startvec), 1, 3) == "p1."), qlogis(0.1), 0.5*random.scale)
             p.startvec[(substr(names(p.startvec), 1, 3) != "p1.")] <-
-                rnorm(sum(substr(names(p.startvec), 1, 3) != "p1."), 0, 0.25*random.scale)
+                rnorm(sum(substr(names(p.startvec), 1, 3) != "p1."), 0, 2)
         }
         ## Start values for the N parameters.
-        Ns.startvec <- c(Ns.1 = 1000, Ns.2 = 1200)
+        Ns.startvec <- c(Ns.1 = 560, Ns.2 = 325)
         ## Creating model object.
         model <- list()
         for (i in 1:n.groups){
@@ -218,9 +220,6 @@ fit.popan <- function(captlist, model.list = NULL, group.pars = NULL, group.effe
         }
         names(model) <- paste0("gp", 1:n.groups)
         ## Putting together the start values.
-        cat("b:", b.startvec, "\n")
-        cat("p:", p.startvec, "\n")
-        cat("phi:", phi.startvec, "\n")
         startvec <- c(Ns.startvec, b.startvec, phi.startvec, p.startvec)
         ## Fitting the model.
         out <- popanGeneral.covs.fit.func(captlist, k = k, birthfunc = b.func, phifunc = phi.func,
@@ -232,9 +231,17 @@ fit.popan <- function(captlist, model.list = NULL, group.pars = NULL, group.effe
         args$random.start <- TRUE
         args$n.attempts <- 1
         ## Could parallelise this.
-        for (i in 1:n.attempts){
-            all.out[[i]] <- do.call("fit.popan", args)
+        FUN <- function(i, args){
+            ## First attempt is with default start values.
+            if (i == 1) args$random.start <- FALSE
+            try(do.call("fit.popan", args), silent = TRUE)
         }
+        cluster <- makeCluster(n.cores)
+        clusterEvalQ(cluster, {
+            source("main.r")
+        })
+        all.out <- parLapplyLB(cluster, 1:(n.attempts + 1), FUN, args = args)
+        stopCluster(cluster)
         lls <- sapply(all.out, function(x) -x$fit$objective)
         out <- all.out[[which(lls == max(lls))[1]]]
         out$all.lls <- lls
