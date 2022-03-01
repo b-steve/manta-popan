@@ -212,7 +212,13 @@ fit.popan <- function(captlist, model.list = NULL, group.pars = NULL, group.effe
                 rnorm(sum(substr(names(p.startvec), 1, 3) != "p1."), 0, 2)
         }
         ## Start values for the N parameters.
-        Ns.startvec <- c(Ns.1 = 560, Ns.2 = 325)
+        if (random.start){
+            Ns.startvec <- c(Ns.1 = runif(1, nrow(captlist[[1]]), 3*nrow(captlist[[1]])),
+                             Ns.2 = runif(1, nrow(captlist[[2]]), 3*nrow(captlist[[2]])))
+        } else {
+            Ns.startvec <- c(Ns.1 = 2*nrow(captlist[[1]]), Ns.2 = 2*nrow(captlist[[2]]))
+        }
+        print(Ns.startvec)
         ## Creating model object.
         model <- list()
         for (i in 1:n.groups){
