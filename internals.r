@@ -1290,3 +1290,19 @@ boot.p <- function(x){
     p.ut <- 2*(0.5*n.zeros + n.ut)/n.boot
     min(p.lt, p.ut)
 }
+
+plot.convergence <- function(fit, n.splits = NULL){
+    random.lls <- fit$all.lls[-1]
+    n.attempts <- length(random.lls)
+    if (is.null(n.splits)){
+        n.splits <- n.attempts
+    }
+    groups <- cut(1:n.attempts, n.splits)
+    random.lls <- tapply(random.lls, groups, max)
+    default.ll <- fit$all.lls[1]
+    ylim.min <- min(c(default.ll, random.lls, random.lls - 1))
+    ylim.max <- max(c(default.ll, random.lls))
+    plot(random.lls, ylim = c(ylim.min, ylim.max))
+    abline(h = max(random.lls))
+    abline(h = default.ll, lty = "dotted", col = "blue", lwd = 1.5)
+}
