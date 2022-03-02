@@ -35,16 +35,18 @@
 ##               group.
 ## random.start: Either TRUE or FALSE. If TRUE, then random start
 ##               values are used.
+## startvec: A vector of specified start values (not recommended
+##           because figuring out the model parameters is difficult).
 ## n.attempts: Number of attempts to fit the model using randomly
 ##             selected start values.
 ## n.cores: Number of cores for parallel processing when n.cores is
 ##          greater than 1.
-fit.popan <- function(captlist, model.list = NULL, group.pars = NULL, group.effect = NULL, df = NULL, printit = FALSE, random.start = FALSE, n.attempts = 1, n.cores = 1){
+fit.popan <- function(captlist, model.list = NULL, group.pars = NULL, group.effect = NULL, df = NULL, printit = FALSE, random.start = FALSE, startvec = NULL, n.attempts = 1, n.cores = 1){
     ## Saving function arguments.
     args <- list(captlist = captlist, model.list = model.list,
                  group.pars = group.pars, group.effect = group.effect,
                  df = df, printit = printit, random.start = random.start,
-                 n.attempts = n.attempts, n.cores = n.cores)
+                 startvec = startvec, n.attempts = n.attempts, n.cores = 1)
     if (n.attempts == 1){
         random.scale <- 1
         ## If captlist is a matrix, turn it into a list for consistency.
@@ -218,7 +220,6 @@ fit.popan <- function(captlist, model.list = NULL, group.pars = NULL, group.effe
         } else {
             Ns.startvec <- c(Ns.1 = 2*nrow(captlist[[1]]), Ns.2 = 2*nrow(captlist[[2]]))
         }
-        print(Ns.startvec)
         ## Creating model object.
         model <- list()
         for (i in 1:n.groups){
@@ -226,7 +227,9 @@ fit.popan <- function(captlist, model.list = NULL, group.pars = NULL, group.effe
         }
         names(model) <- paste0("gp", 1:n.groups)
         ## Putting together the start values.
-        startvec <- c(Ns.startvec, b.startvec, phi.startvec, p.startvec)
+        if (is.null(startvec) | random.start){
+            startvec <- c(Ns.startvec, b.startvec, phi.startvec, p.startvec)
+        }
         ## Fitting the model.
         out <- popanGeneral.covs.fit.func(captlist, k = k, birthfunc = b.func, phifunc = phi.func,
                                           pfunc = p.func, model = model, startvec = startvec,
@@ -234,9 +237,9 @@ fit.popan <- function(captlist, model.list = NULL, group.pars = NULL, group.effe
         out$args <- args
     } else {
         all.out <- vector(mode = "list", length = n.attempts)
-        args$random.start <- TRUE
-        args$n.attempts <- 1
-        ## Could parallelise this.
+        single.args <- args
+        single.args$random.start <- TRUE
+        single.args$n.attempts <- 1
         FUN <- function(i, args){
             ## First attempt is with default start values.
             if (i == 1) args$random.start <- FALSE
@@ -246,10 +249,11 @@ fit.popan <- function(captlist, model.list = NULL, group.pars = NULL, group.effe
         clusterEvalQ(cluster, {
             source("main.r")
         })
-        all.out <- parLapplyLB(cluster, 1:(n.attempts + 1), FUN, args = args)
+        all.out <- parLapplyLB(cluster, 1:(n.attempts + 1), FUN, args = single.args)
         stopCluster(cluster)
         lls <- sapply(all.out, function(x) -x$fit$objective)
         out <- all.out[[which(lls == max(lls))[1]]]
+        out$args <- args
         out$all.lls <- lls
     }
     out
@@ -568,10 +572,12 @@ summary.ma.popan <- function(fit.ma, method = "best", pars = "ENs", groups = NUL
 ##             are considered, the longer the function will take,
 ##             because all models under consideration are fitted for
 ##             each bootstrap iteration.
+## random.start, n.atempts: Passed to fit.popan().
 ## n.cores: The number of cores for parallel computing.
 ## verbose: Logical. If TRUE, progress is printed to the console.
 
-manta.ma.wrap <- function(captlist, mei, chat = 1, n.boots = 100, AIC.cutoff = 10, n.cores = 1, verbose = TRUE){
+manta.ma.wrap <- function(captlist, mei, chat = 1, n.boots = 100, AIC.cutoff = 10, random.start = FALSE,
+                          n.attempts = 1, n.cores = 1, verbose = TRUE){
     ## Turning mei into a data frame because that's what the fitting function needs.
     mei <- data.frame(mei)
     ## The object args is a list, where each component corresponds to a
@@ -664,7 +670,8 @@ manta.ma.wrap <- function(captlist, mei, chat = 1, n.boots = 100, AIC.cutoff = 1
                                               group.effect = list(b = ge.b,
                                                                   phi = ge.phi,
                                                                   p = ge.p),
-                                              df = mei)
+                                              df = mei, random.start = random.start,
+                                              n.attempts = n.attempts, n.cores = 1)
                             k <- k + 1        
                         }
                     }
