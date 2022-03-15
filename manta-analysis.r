@@ -18,13 +18,93 @@ misool.gof[[2]]$test3sr
 ## You can get M-arrays for each group like this:
 misool.gof[[1]]$marray
 
-
-## Doing everything for the misool analysis.
+## Doing everything for the Misool analysis.
 misool.wrap.out <- manta.ma.wrap(misool.captlist, mei = covs$mei, chat = 1,
-                                 n.boot = 1000, AIC.cutoff = 10, random.start = TRUE,
-                                 n.attempts = 20, n.cores = 3)
-misool.best.fits <- misool.wrap.out$best.fits
-misool.ma.fit <- misool.wrap.out$fit.ma
+                                n.boot = 1000, AIC.cutoff = 10, random.start = TRUE,
+                                n.attempts = 20, n.cores = 3)
+## And for the Dampier analysis.
+#dampier.wrap.out <- manta.ma.wrap(dampier.captlist, mei = covs$mei, chat = dampier.chat,
+#                                n.boot = 0, AIC.cutoff = 10000, random.start = TRUE,
+#                                n.attempts = 500, n.cores = 3)
+#save(dampier.wrap.out, file = "dampier-wrap-out.RData")
+load("dampier-wrap-out.RData")
+
+dampier.aics <- sapply(dampier.wrap.out$best.fits, AIC, chat = dampier.chat)
+save.fits <- dampier.wrap.out$best.fits[dampier.aics < min(dampier.aics) + 10]
+
+for (i in 1:length(dampier.wrap.out$best.fits)){
+    plot.convergence(dampier.wrap.out$best.fits[[i]], n.splits = 10)
+    cat(i)
+    readline()
+}
+
+for (i in 1:length(save.fits)){
+    plot.convergence(save.fits[[i]], n.splits = 5)
+    cat(i)
+    readline()
+}
+
+for (i in 1:length(save.fits)){
+    plot(save.fits[[i]])
+    cat(i)
+    readline()
+}
+
+
+load("misool-wrap-out.RData")
+misool.aics <- sapply(misool.wrap.out$best.fits, AIC, chat = 1)
+save.fits <- misool.wrap.out$best.fits[misool.aics < min(misool.aics) + 10]
+
+for (i in 1:length(misool.wrap.out$best.fits)){
+    plot(misool.wrap.out$best.fits[[i]])
+    cat(i)
+    readline()
+}
+
+for (i in 1:length(save.fits)){
+    plot.convergence(save.fits[[i]])
+    cat(i)
+    readline()
+}
+
+for (i in 1:length(save.fits)){
+    plot(save.fits[[i]])
+    cat(i)
+    readline()
+}
+
+for (i in 1:length(misool.best.fits)){
+    plot(misool.best.fits[[order(aics)[i]]])
+    readline()
+}
+
+fit <- fit.popan(misool.captlist,
+                 misool.best.fits[[480]]$args$model.list,
+                 misool.best.fits[[480]]$args$group.pars,
+                 misool.best.fits[[480]]$args$group.effect,
+                 df = covs, n.attempts = 250, n.cores = 3)
+plot.convergence(fit)
+fit$args$n.attempts <- 50
+fit.boot <- boot.popan(fit, n.boots = 50, n.cores = 3)
+#fit.boot.old <- fit.boot
+for (i in 1:50){
+    plot.convergence(fit.boot$boots[[i]])
+    readline()
+}
+
+
+fit.list <- vector(mode = "list", length = 512)
+for (i in 1:512){
+    cat(i, "\n")
+    fit.list[[i]] <- fit.popan(misool.captlist,
+                               misool.best.fits[[i]]$args$model.list,
+                               misool.best.fits[[i]]$args$group.pars,
+                               misool.best.fits[[i]]$args$group.effect,
+                               df = covs, n.attempts = 250, n.cores = 3)
+    plot.convergence(fit.list[[i]])
+}
+save.image("overnight-test.RData")
+>>>>>>> Stashed changes
 
 ## Need something like this for Dampier, noting we need the chat for Dampier.
 dampier.wrap.out <- manta.ma.wrap(misool.captlist, mei = covs$mei, chat = dampier.chat,
@@ -155,3 +235,4 @@ summary(misool.ma.fit, par.fun = function(x, ...) x$rhos[, 1] - (1 - x$phis[, 1]
 summary(misool.ma.fit, par.fun = function(x, ...) x$rhos[, 2] - (1 - x$phis[, 2]), par.fun.p = TRUE)
 ## So you can get summaries for any function of parameters you like in
 ## a very flexible way.
+

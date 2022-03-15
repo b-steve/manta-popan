@@ -398,6 +398,8 @@ boot.ma.popan <- function(fits, n.boots = 10, chat = 1, n.cores = 1, progress.ba
         ## Putting the bootstrap data into the components of the args list.
         for (j in 1:n.fits){
             args.boot[[j]]$captlist <- captlist.boot
+            args.boot[[j]]$n.attempts <- 1
+            args.boot[[j]]$startvec <- fits[[j]]$fit$par
         }
         ## Fitting each of the models to the bootstrapped data set.
         fits.boot <- par.fit.popan(n.cores = n.cores, arg.list = args.boot)
