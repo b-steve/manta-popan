@@ -20,14 +20,16 @@ misool.gof[[1]]$marray
 
 
 ## Doing everything for the misool analysis.
-misool.wrap.out <- manta.ma.wrap(misool.captlist, mei = covs$mei, chat = misool.chat,
-                                 n.boot = 5, AIC.cutoff = 10, n.cores = 3)
+misool.wrap.out <- manta.ma.wrap(misool.captlist, mei = covs$mei, chat = 1,
+                                 n.boot = 1000, AIC.cutoff = 10, random.start = TRUE,
+                                 n.attempts = 20, n.cores = 3)
 misool.best.fits <- misool.wrap.out$best.fits
 misool.ma.fit <- misool.wrap.out$fit.ma
 
 ## Need something like this for Dampier, noting we need the chat for Dampier.
 dampier.wrap.out <- manta.ma.wrap(misool.captlist, mei = covs$mei, chat = dampier.chat,
-                                  n.boot = 100, AIC.cutoff = 10, n.cores = 3)
+                                  n.boot = 1000, AIC.cutoff = 10, random.start = TRUE,
+                                  n.attempts = 100, n.cores = 3)
 misool.best.fits <- misool.wrap.out$best.fits
 misool.ma.fit <- misool.wrap.out$fit.ma
 
