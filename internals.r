@@ -1300,9 +1300,13 @@ plot.convergence <- function(fit, n.splits = NULL){
     groups <- cut(1:n.attempts, n.splits)
     random.lls <- tapply(random.lls, groups, max)
     default.ll <- fit$all.lls[1]
-    ylim.min <- min(c(default.ll, random.lls, random.lls - 1))
     ylim.max <- max(c(default.ll, random.lls))
+    ylim.min <- ylim.max - 10
     plot(random.lls, ylim = c(ylim.min, ylim.max))
+    arrows(x0 = (1:length(random.lls))[random.lls < ylim.min],
+           y0 = rep(ylim.min + 0.5, sum(random.lls < ylim.min)),
+           y1 = rep(ylim.min, sum(random.lls < ylim.min)),
+           length = 0.1)
     abline(h = max(random.lls))
     abline(h = default.ll, lty = "dotted", col = "blue", lwd = 1.5)
 }
