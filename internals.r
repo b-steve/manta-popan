@@ -92,6 +92,9 @@ popansummary.func <- function(det.dat) {
         last.tab = as.vector(last.tab)
     )
     attributes(summaries)$nhist <- nhist
+    attributes(summaries)$first.obs <- first.obs
+    attributes(summaries)$last.obs <- last.obs
+    attributes(summaries)$det.dat <- det.dat
     summaries
 }
 
