@@ -47,6 +47,8 @@ fit.popan <- function(captlist, model.list = NULL, group.pars = NULL, group.effe
                  group.pars = group.pars, group.effect = group.effect,
                  df = df, printit = printit, random.start = random.start,
                  startvec = startvec, n.attempts = n.attempts, n.cores = 1)
+    ## Detecting whether or not we are fitting a transience model.
+    transience <- !is.null(model.list$ptr)
     if (n.attempts == 1){
         random.scale <- 1
         ## If captlist is a matrix, turn it into a list for consistency.
@@ -75,10 +77,6 @@ fit.popan <- function(captlist, model.list = NULL, group.pars = NULL, group.effe
         b.func <- b.obj[[1]]
         ## Number of parameters.
         n.b.par <- b.obj[[2]]
-        
-###
-                                        #n.b.par <- 2
-        
         ## Setting defaults so Rachel's function knows how many parameters there are.
         formals(b.func)$pars <- rep(0, n.b.par)
         ## Parameter names for the groups.
@@ -104,9 +102,7 @@ fit.popan <- function(captlist, model.list = NULL, group.pars = NULL, group.effe
         if (group.effect[["b"]]){
             n.b.par <- n.b.par + 1
             b.par.names[[2]][1] <- "b1.2"
-        }
-        
-        
+        }    
         ## Start values for b parameters.
         b.startvec <- numeric(sum(sapply(b.par.names, length)))
         names(b.startvec) <- c(b.par.names, recursive = TRUE)
@@ -213,6 +209,64 @@ fit.popan <- function(captlist, model.list = NULL, group.pars = NULL, group.effe
             p.startvec[(substr(names(p.startvec), 1, 3) != "p1.")] <-
                 rnorm(sum(substr(names(p.startvec), 1, 3) != "p1."), 0, 2)
         }
+
+
+
+
+
+
+
+
+        
+        ## Doing all the same stuff with ptr.
+        ## Model for survival parameters.
+        ptr.model <- model.list[["ptr"]]
+        if (is.null(ptr.model)){
+            ptr.model <- ~ occasion
+        }
+        ## Creating a function to model transience probability parameters. Note that it
+        ## doesn't use the covariates for the final occasion.
+        ptr.obj <- cov.func(ptr.model, df[-k, , drop = FALSE], plogis)
+        ## The function.
+        ptr.func <- ptr.obj[[1]]
+        ## Number of parameters.
+        n.ptr.par <- ptr.obj[[2]]
+        ## Setting defaults so Rachel's function knows how many parameters there are.
+        formals(ptr.func)$pars <- rep(0, n.ptr.par)
+        ## Parameter names for the groups.
+        ptr.par.names <- vector(mode = "list", length = n.groups)
+        ## Logical value for whether or not to share ptr parameters across groups.
+        ptr.group <- group.pars[["ptr"]]
+        if (is.null(ptr.group)){
+            ptr.group <- TRUE
+        }
+        for (i in 1:n.groups){
+            ptr.par.names[[i]] <- paste0("ptr", 1:n.ptr.par, ".", ifelse(ptr.group, 1, i))
+        }
+        ## Logical value for whether or not to put a group effect on ptr.
+        ptr.effect <- group.effect[["ptr"]]
+        if (is.null(ptr.effect)){
+            ptr.effect <- FALSE
+        }
+        ## Error if we have both effect and not grouping.
+        if (!ptr.group & ptr.effect){
+            stop("You can't fit a group effect on parameter ptr if effects are not grouped.")
+        }
+        ## Put an additive group effect.
+        if (ptr.effect){
+            n.ptr.par <- n.ptr.par + 1
+            ptr.par.names[[2]][1] <- "ptr1.2"
+        }
+        ## Start values for ptr parameters.
+        ptr.startvec <- numeric(sum(sapply(ptr.par.names, length)))
+        names(ptr.startvec) <- c(ptr.par.names, recursive = TRUE)
+        ptr.startvec[(substr(names(ptr.startvec), 1, 5) == "ptr1.")] <- qlogis(0.1)
+        if (random.start){
+            ptr.startvec[(substr(names(ptr.startvec), 1, 5) == "ptr1.")] <-
+                rnorm(sum(substr(names(ptr.startvec), 1, 5) == "ptr1."), qlogis(0.1), 0.5*random.scale)
+            ptr.startvec[(substr(names(ptr.startvec), 1, 5) != "ptr1.")] <-
+                rnorm(sum(substr(names(ptr.startvec), 1, 5) != "ptr1."), 0, 2)
+        }
         ## Start values for the N parameters.
         if (random.start){
             Ns.startvec <- c(Ns.1 = runif(1, nrow(captlist[[1]]), 3*nrow(captlist[[1]])),
@@ -223,17 +277,24 @@ fit.popan <- function(captlist, model.list = NULL, group.pars = NULL, group.effe
         ## Creating model object.
         model <- list()
         for (i in 1:n.groups){
-            model[[i]] <- c(paste0("Ns.", i), b.par.names[[i]], phi.par.names[[i]], p.par.names[[i]])
+            model[[i]] <- c(paste0("Ns.", i), b.par.names[[i]], phi.par.names[[i]], p.par.names[[i]], ptr.par.names[[i]][transience])
         }
         names(model) <- paste0("gp", 1:n.groups)
         ## Putting together the start values.
         if (is.null(startvec) | random.start){
-            startvec <- c(Ns.startvec, b.startvec, phi.startvec, p.startvec)
+            startvec <- c(Ns.startvec, b.startvec, phi.startvec, p.startvec, ptr.startvec[transience])
         }
         ## Fitting the model.
-        out <- popanGeneral.covs.fit.func(captlist, k = k, birthfunc = b.func, phifunc = phi.func,
-                                          pfunc = p.func, model = model, startvec = startvec,
-                                          printit = printit)
+        if (transience){
+            out <- popanGeneral.covs.fit.func.transience(captlist, k = k, birthfunc = b.func, phifunc = phi.func,
+                                                         pfunc = p.func, ptrfunc = ptr.func,
+                                                         model = model, startvec = startvec,
+                                                         printit = printit)
+        } else {
+            out <- popanGeneral.covs.fit.func(captlist, k = k, birthfunc = b.func, phifunc = phi.func,
+                                              pfunc = p.func, model = model, startvec = startvec,
+                                              printit = printit)
+        }
         out$args <- args
     } else {
         all.out <- vector(mode = "list", length = n.attempts)
