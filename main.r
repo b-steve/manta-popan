@@ -59,7 +59,7 @@ fit.popan <- function(captlist, model.list = NULL, group.pars = NULL, group.effe
         n.groups <- length(captlist)
         ## Number of occasions (needs to be the same across groups).
         k  <- ncol(captlist[[1]])
-                                        # Setting up data frame.
+        ## Setting up data frame.
         if (is.null(df)){
             df <- data.frame(occasion = as.factor(1:k))
         } else {
@@ -208,18 +208,25 @@ fit.popan <- function(captlist, model.list = NULL, group.pars = NULL, group.effe
                 rnorm(sum(substr(names(p.startvec), 1, 3) == "p1."), qlogis(0.1), 0.5*random.scale)
             p.startvec[(substr(names(p.startvec), 1, 3) != "p1.")] <-
                 rnorm(sum(substr(names(p.startvec), 1, 3) != "p1."), 0, 2)
+        }     
+        ## Start values for the N parameters.
+        if (random.start){
+            Ns.startvec <- c(Ns.1 = runif(1, nrow(captlist[[1]]), 3*nrow(captlist[[1]])),
+                             Ns.2 = runif(1, nrow(captlist[[2]]), 3*nrow(captlist[[2]])))
+        } else {
+            Ns.startvec <- c(Ns.1 = 2*nrow(captlist[[1]]), Ns.2 = 2*nrow(captlist[[2]]))
         }
-
-
-
-
-
-
-
-
-        
+        ## Detecting if a provided startvec doesn't include ptr.
+        no.ptr.start <- FALSE
+        if (transience){
+            if (!is.null(startvec)){
+                if (length(startvec) == length(c(Ns.startvec, b.startvec, phi.startvec, p.startvec))){
+                    no.ptr.start <- TRUE
+                }
+            }
+        }
         ## Doing all the same stuff with ptr.
-        ## Model for survival parameters.
+        ## Model for transience parameters.
         ptr.model <- model.list[["ptr"]]
         if (is.null(ptr.model)){
             ptr.model <- ~ occasion
@@ -260,19 +267,18 @@ fit.popan <- function(captlist, model.list = NULL, group.pars = NULL, group.effe
         ## Start values for ptr parameters.
         ptr.startvec <- numeric(sum(sapply(ptr.par.names, length)))
         names(ptr.startvec) <- c(ptr.par.names, recursive = TRUE)
-        ptr.startvec[(substr(names(ptr.startvec), 1, 5) == "ptr1.")] <- qlogis(0.1)
+        ## If start values are provided for everything but ptr, then make transience effects zero.
+        if (no.ptr.start){
+            ptr.startvec[(substr(names(ptr.startvec), 1, 5) == "ptr1.")] <- qlogis(0.001)
+            startvec <- c(startvec, ptr.startvec)
+        } else {
+            ptr.startvec[(substr(names(ptr.startvec), 1, 5) == "ptr1.")] <- qlogis(0.1)
+        }
         if (random.start){
             ptr.startvec[(substr(names(ptr.startvec), 1, 5) == "ptr1.")] <-
                 rnorm(sum(substr(names(ptr.startvec), 1, 5) == "ptr1."), qlogis(0.1), 0.5*random.scale)
             ptr.startvec[(substr(names(ptr.startvec), 1, 5) != "ptr1.")] <-
                 rnorm(sum(substr(names(ptr.startvec), 1, 5) != "ptr1."), 0, 2)
-        }
-        ## Start values for the N parameters.
-        if (random.start){
-            Ns.startvec <- c(Ns.1 = runif(1, nrow(captlist[[1]]), 3*nrow(captlist[[1]])),
-                             Ns.2 = runif(1, nrow(captlist[[2]]), 3*nrow(captlist[[2]])))
-        } else {
-            Ns.startvec <- c(Ns.1 = 2*nrow(captlist[[1]]), Ns.2 = 2*nrow(captlist[[2]]))
         }
         ## Creating model object.
         model <- list()
@@ -318,6 +324,27 @@ fit.popan <- function(captlist, model.list = NULL, group.pars = NULL, group.effe
         out$all.lls <- lls
     }
     out
+}
+
+## Adds transience to an existing non-transience model.
+add.transience <- function(fit, ptr.model = ~ 1, ptr.group.pars = TRUE, ptr.group.effect = FALSE, n.attempts = 1, n.cores = 1, startvec = "estimates"){
+    args <- fit$args
+    args$model.list$ptr <- ptr.model
+    args$group.pars$ptr <- ptr.group.pars
+    args$group.effect$ptr <- ptr.group.effect
+    args$n.attempts <- n.attempts
+    args$n.cores <- n.cores
+    if (startvec == "estimates"){
+        args$startvec <- fit$fit$par
+    } else if (startvec == "random"){
+        args$random.start = TRUE
+    } else if (startvec == "default"){
+        ## Do nothing.
+    } else {
+        args$startvec  <- startvec
+    }
+
+    do.call("fit.popan", args)
 }
 
 ## Function to simulate new data based on estimates from a previously fitted model.
