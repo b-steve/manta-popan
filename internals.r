@@ -767,7 +767,6 @@ popanGeneral.fit.func <- function(dat, k=ncol(dat[[1]]), birthfunc = immigration
             ## Number of capture histories in this group:
             popsum <- popsumList[[gp]]
             nhist <- nhistList[[gp]]
-            browser()
             ## Return the negative log-likelihood contribution for this group:
             nll <- -sum(
                  ## Binomial coefficients
