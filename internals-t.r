@@ -228,6 +228,8 @@ popanGeneral.covs.fit.func.transience <- function(dat, k=ncol(dat[[1]]), birthfu
                 ## so the analytic continuation of the negative log likelihood contribution is
                 ## -lgamma(N+1) + lgamma(N-nhist+1) - (N-nhist) log(p.unseen):
                 nllike <- -lgamma(Ns + 1) + lgamma(Ns - nhist + 1) - (Ns - nhist) * log.p.unseen
+                ## Constant so that we get the same log-likelihood as Robin's code.
+                nllike <- nllike + lfactorial(nhist)
                 ## Now for the animals that were seen.
                 ## Go through the data frame according to the occasion of first sighting,
                 ## finding capture history probabilities:
@@ -312,7 +314,9 @@ popanGeneral.covs.fit.func.transience <- function(dat, k=ncol(dat[[1]]), birthfu
                 ## Probability of an individual being undetected.
             log.p.unseen <- log(sum(((1 - pvec)*ptrvec.full + (1 - pvec)*chivec.resid*(1 - ptrvec.full))*pentvec))
             ## Likelihood contribution from the unseen individuals.
-                nllike <- -lgamma(Ns + 1) + lgamma(Ns - nhist + 1) - (Ns - nhist) * log.p.unseen
+            nllike <- -lgamma(Ns + 1) + lgamma(Ns - nhist + 1) - (Ns - nhist) * log.p.unseen
+            ## Constant so that we get the same log-likelihood as Robin's code.
+            nllike <- nllike + lfactorial(nhist)
             ## Likelihood contributions from animals that were seen.
             for (f in 1:k){
                 if (any(first.obs == f)){
