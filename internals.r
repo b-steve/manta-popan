@@ -397,9 +397,9 @@ popanLambda.fit.func <- function(dat, k=ncol(dat[[1]]), model=list(
         ## Overall negative-log-likelihood is the sum across groups:
         nll <- sum(sapply(1:ngp, onegroup.func))
         if(printit){
-            for (i in 1:length(pars)){
-                cat(names(pars)[i], ": ", round(pars[i], 3), ", ", sep = "")
-            }
+            #for (i in 1:length(pars)){
+            #    cat(names(pars)[i], ": ", round(pars[i], 3), ", ", sep = "")
+            #}
             cat("NLL:", nll, "\n")
         }
         return(nll)
@@ -767,7 +767,7 @@ popanGeneral.fit.func <- function(dat, k=ncol(dat[[1]]), birthfunc = immigration
             ## Number of capture histories in this group:
             popsum <- popsumList[[gp]]
             nhist <- nhistList[[gp]]
-
+            browser()
             ## Return the negative log-likelihood contribution for this group:
             nll <- -sum(
                  ## Binomial coefficients
@@ -790,9 +790,9 @@ popanGeneral.fit.func <- function(dat, k=ncol(dat[[1]]), birthfunc = immigration
         ## Overall negative-log-likelihood is the sum across groups:
         nll <- sum(sapply(1:ngp, onegroup.func, out = out))
         if(printit){
-            for (i in 1:length(pars)){
-                cat(names(pars)[i], ": ", round(pars[i], 3), ", ", sep = "")
-            }
+            #for (i in 1:length(pars)){
+            #    cat(names(pars)[i], ": ", round(pars[i], 3), ", ", sep = "")
+            #}
             cat("NLL:", nll, "\n")
         }
         if (out == "nll"){
@@ -831,7 +831,7 @@ popanGeneral.fit.func <- function(dat, k=ncol(dat[[1]]), birthfunc = immigration
 
 plot.popan <- function(object, ...){
     par(mfrow = c(3, 2))
-    for (i in 3:6){
+    for (i in 3:ifelse(any(names(object) == "ptrs"), 7, 6)){
         plot.new()
         ys <- object[[i]]
         k <- nrow(ys)
@@ -1083,9 +1083,9 @@ popanGeneral.covs.fit.func <- function(dat, k=ncol(dat[[1]]), birthfunc = immigr
         ## Overall negative-log-likelihood is the sum across groups:
         nll <- sum(sapply(1:ngp, onegroup.func, out = out))
         if(printit){
-            for (i in 1:length(pars)){
-                cat(names(pars)[i], ": ", round(pars[i], 3), ", ", sep = "")
-            }
+            #for (i in 1:length(pars)){
+            #    cat(names(pars)[i], ": ", round(pars[i], 3), ", ", sep = "")
+            #}
             cat("NLL:", nll, "\n")
         }
         if (out == "nll"){
