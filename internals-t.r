@@ -299,11 +299,7 @@ popanGeneral.covs.fit.func.transience <- function(dat, k=ncol(dat[[1]]), birthfu
 
                 ## Print current values if required:
                 ## print(data.frame(c(allparvec, "nllike"), c(allvalues, nllike)));cat("\n")
-            }  else {
-            
-            
-
-            
+            }  else if (liktype == "ben"){
             ## Probability of not being seen after occasion t, given alive at occasion t.
             chivec.trans <- rep(1, k)
             chivec.resid <- numeric(k)
@@ -349,6 +345,7 @@ popanGeneral.covs.fit.func.transience <- function(dat, k=ncol(dat[[1]]), birthfu
                         ## first sighting to the occasion L-1 immediately previous to its last sighting.
                         datvec.hst <- dat.f[hst, f:last.hst]
                         p.hst <- pvec[f:last.hst]
+                        #browser()
                         phi.hst <- phivec[f:(last.hst-1)]
                         ## For residents, joint probability of entry and obtaining all leading zeroes.
 
@@ -376,7 +373,10 @@ popanGeneral.covs.fit.func.transience <- function(dat, k=ncol(dat[[1]]), birthfu
                     }
                 }
             }
-                }
+ 
+            } else if (liktype == "cpp"){
+                nllike <- popan_ll(k, phivec, pvec, ptrvec.full, pentvec, Ns, nhist, first.obs, last.obs, det.dat)
+            } 
             nll <- nllike
             out <- get(out)
             out

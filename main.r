@@ -1140,5 +1140,7 @@ popan.plot <- function(fit.ma, year.start = 2009, year.end = 2019) {
 library(mgcv)
 library(parallel)
 library(R2ucare)
+library(Rcpp)
 source("internals.r")
 source("internals-t.r")
+sourceCpp("popan-ll.cpp")
