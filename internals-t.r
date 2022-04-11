@@ -204,7 +204,7 @@ popanGeneral.covs.fit.func.transience <- function(dat, k=ncol(dat[[1]]), birthfu
             det.dat <- det.datList[[gp]]
             if (Ns < nhist) return(NA)
             
-            liktype <- "ben"
+            liktype <- "cpp"
             if (liktype == "rachel"){
                 ## Find the chi parameters.  chivec[t] = P(never seen after occasion t | alive at t).
                 pentvec <- pentGeneral.func(rhovec, phivec, k)
