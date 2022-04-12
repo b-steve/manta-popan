@@ -406,7 +406,7 @@ popanGeneral.covs.fit.func.transience <- function(dat, k=ncol(dat[[1]]), birthfu
         objective = negloglik.func,
         lower = lowervec,
         upper = uppervec,
-        control=list(iter.max=1e5, eval.max=1e5, rel.tol = 1e-15))
+        control=list(iter.max=1e3, eval.max=1e3, rel.tol = 1e-15))
     pents <- negloglik.func(pars = fit$par, out = "pentvec")
     rownames(pents) <- NULL
     phis <- negloglik.func(pars = fit$par, out = "phivec")
@@ -416,8 +416,9 @@ popanGeneral.covs.fit.func.transience <- function(dat, k=ncol(dat[[1]]), birthfu
     ptrs <- negloglik.func(pars = fit$par, out = "ptrvec")
     ENs <- matrix(0, nrow = k, ncol = ngp)
     ENs[1, ] <- Ns*pents[1, ]
-    for (i in 2:k){
-        ENs[i, ] <- phis[i - 1, ]*ENs[i - 1, ] + Ns*pents[i, ]
+    ENs[2, ] <- (phis[1, ] + rhos[1, ])*(1 - ptrs[1, ])*ENs[1, ]
+    for (i in 3:k){
+        ENs[i, ] <- (phis[i - 1, ] + rhos[i - 1, ])*(phis[i - 2, ] + (1 - ptrs[i - 1, ])*rhos[i - 2, ])*ENs[i - 1,]/(phis[i - 2, ] + rhos[i - 2, ])
     }
     out <- list(fit = fit, Ns = Ns, phis = phis, rhos = rhos, ps = ps, ptrs = ptrs, pents = pents, ENs = ENs)
     class(out) <- "popan"
