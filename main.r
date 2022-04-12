@@ -210,11 +210,16 @@ fit.popan <- function(captlist, model.list = NULL, group.pars = NULL, group.effe
                 rnorm(sum(substr(names(p.startvec), 1, 3) != "p1."), 0, 2)
         }     
         ## Start values for the N parameters.
+        Ns.startvec <- numeric(n.groups)
+        names(Ns.startvec) <- paste("Ns", 1:n.groups, sep = ".")
         if (random.start){
-            Ns.startvec <- c(Ns.1 = runif(1, nrow(captlist[[1]]), 3*nrow(captlist[[1]])),
-                             Ns.2 = runif(1, nrow(captlist[[2]]), 3*nrow(captlist[[2]])))
+            for (i in 1:n.groups){
+                Ns.startvec[i] <- runif(1, nrow(captlist[[i]]), 3*nrow(captlist[[i]]))
+            }
         } else {
-            Ns.startvec <- c(Ns.1 = 2*nrow(captlist[[1]]), Ns.2 = 2*nrow(captlist[[2]]))
+            for (i in 1:n.groups){
+                Ns.startvec[i] <- 2*nrow(captlist[[i]])
+            }
         }
         ## Detecting if a provided startvec doesn't include ptr.
         no.ptr.start <- FALSE
