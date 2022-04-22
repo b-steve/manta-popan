@@ -99,13 +99,19 @@ fit.popan <- function(captlist, model.list = NULL, group.pars = NULL, group.effe
             stop("You can't fit a group effect on parameter b if effects are not grouped.")
         }
         ## Put an additive group effect.
-        if (group.effect[["b"]]){
+        if (b.effect){
             n.b.par <- n.b.par + 1
             b.par.names[[2]][1] <- "b1.2"
-        }    
+        }
+        if (!b.group){
+            n.b.par <- n.groups*n.b.par
+        }
+        if (n.b.par != length(unique(c(b.par.names, recursive = TRUE)))){
+            stop("Incorrect number of b parameters in startvec.")
+        }
         ## Start values for b parameters.
-        b.startvec <- numeric(sum(sapply(b.par.names, length)))
-        names(b.startvec) <- c(b.par.names, recursive = TRUE)
+        b.startvec <- numeric(n.b.par)
+        names(b.startvec) <- unique(c(b.par.names, recursive = TRUE))
         if (random.start){
             b.startvec[(substr(names(b.startvec), 1, 3) == "b1.")] <-
                 rnorm(sum(substr(names(b.startvec), 1, 3) == "b1."), log(0.25), 0.2*random.scale)
@@ -151,10 +157,15 @@ fit.popan <- function(captlist, model.list = NULL, group.pars = NULL, group.effe
             n.phi.par <- n.phi.par + 1
             phi.par.names[[2]][1] <- "phi1.2"
         }
+        if (!phi.group){
+            n.phi.par <- n.groups*n.phi.par
+        }
+        if (n.phi.par != length(unique(c(phi.par.names, recursive = TRUE)))){
+            stop("Incorrect number of phi parameters in startvec.")
+        }
         ## Start values for phi parameters.
-        phi.startvec <- numeric(sum(sapply(phi.par.names, length)))
-        names(phi.startvec) <- c(phi.par.names, recursive = TRUE)
-        
+        phi.startvec <- numeric(n.phi.par)
+        names(phi.startvec) <- unique(c(phi.par.names, recursive = TRUE))
         if (random.start){
             phi.startvec[(substr(names(phi.startvec), 1, 5) == "phi1.")] <-
                 rnorm(sum(substr(names(phi.startvec), 1, 5) == "phi1."), qlogis(0.8), 0.5*random.scale)
@@ -195,13 +206,19 @@ fit.popan <- function(captlist, model.list = NULL, group.pars = NULL, group.effe
             stop("You can't fit a group effect on parameter p if effects are not grouped.")
         }
         ## Put an additive group effect.
-        if (group.effect[["p"]]){
+        if (p.effect){
             n.p.par <- n.p.par + 1
             p.par.names[[2]][1] <- "p1.2"
         }
+        if (!p.group){
+            n.p.par <- n.groups*n.p.par
+        }
+        if (n.p.par != length(unique(c(p.par.names, recursive = TRUE)))){
+            stop("Incorrect number of p parameters in startvec.")
+        }
         ## Start values for p parameters.
-        p.startvec <- numeric(sum(sapply(p.par.names, length)))
-        names(p.startvec) <- c(p.par.names, recursive = TRUE)
+        p.startvec <- numeric(n.p.par)
+        names(p.startvec) <- unique(c(p.par.names, recursive = TRUE))
         p.startvec[(substr(names(p.startvec), 1, 3) == "p1.")] <- qlogis(0.1)
         if (random.start){
             p.startvec[(substr(names(p.startvec), 1, 3) == "p1.")] <-
@@ -269,12 +286,18 @@ fit.popan <- function(captlist, model.list = NULL, group.pars = NULL, group.effe
             n.ptr.par <- n.ptr.par + 1
             ptr.par.names[[2]][1] <- "ptr1.2"
         }
+        if (!ptr.group){
+            n.ptr.par <- n.groups*n.ptr.par
+        }
+        if (n.ptr.par != length(unique(c(ptr.par.names, recursive = TRUE)))){
+            stop("Incorrect number of ptr parameters in startvec.")
+        }
         ## Start values for ptr parameters.
-        ptr.startvec <- numeric(sum(sapply(ptr.par.names, length)))
-        names(ptr.startvec) <- c(ptr.par.names, recursive = TRUE)
-        ## If start values are provided for everything but ptr, then make transience effects zero.
+        ptr.startvec <- numeric(n.ptr.par)
+        names(ptr.startvec) <- unique(c(ptr.par.names, recursive = TRUE))
+        ## If start values are provided for everything but ptr, then make transience probability 0.1.
         if (no.ptr.start){
-            ptr.startvec[(substr(names(ptr.startvec), 1, 5) == "ptr1.")] <- qlogis(0.001)
+            ptr.startvec[(substr(names(ptr.startvec), 1, 5) == "ptr1.")] <- qlogis(0.5)
             startvec <- c(startvec, ptr.startvec)
         } else {
             ptr.startvec[(substr(names(ptr.startvec), 1, 5) == "ptr1.")] <- qlogis(0.1)
@@ -332,25 +355,31 @@ fit.popan <- function(captlist, model.list = NULL, group.pars = NULL, group.effe
 }
 
 ## Adds transience to an existing non-transience model.
-add.transience <- function(fit, ptr.model = ~ 1, ptr.group.pars = TRUE, ptr.group.effect = FALSE, n.attempts = 1, n.cores = 1, startvec = "estimates"){
+add.transience <- function(fit, ptr.model = ~ 1, ptr.group.pars = TRUE, ptr.group.effect = FALSE, n.attempts = 1, n.cores = 1, startvec = "random", printit = FALSE){
     args <- fit$args
     args$model.list$ptr <- ptr.model
     args$group.pars$ptr <- ptr.group.pars
     args$group.effect$ptr <- ptr.group.effect
     args$n.attempts <- n.attempts
     args$n.cores <- n.cores
+    args$printit <- printit
+    
     if (startvec == "estimates"){
         args$startvec <- fit$fit$par
+        args$random.start <- FALSE
     } else if (startvec == "random"){
         args$random.start = TRUE
     } else if (startvec == "default"){
         ## Do nothing.
     } else {
         args$startvec  <- startvec
+        args$random.start <- FALSE
     }
 
     do.call("fit.popan", args)
 }
+
+
 
 ## Function to simulate new data based on estimates from a previously fitted model.
 
@@ -672,9 +701,10 @@ summary.ma.popan <- function(fit.ma, method = "best", pars = "ENs", groups = NUL
 ## verbose: Logical. If TRUE, progress is printed to the console.
 
 manta.ma.wrap <- function(captlist, mei, chat = 1, n.boots = 100, AIC.cutoff = 10, random.start = FALSE,
-                          n.attempts = 1, n.cores = 1, verbose = TRUE){
+                          n.attempts = 1, n.cores = 1, include.transience = FALSE, verbose = TRUE){
     ## Turning mei into a data frame because that's what the fitting function needs.
     mei <- data.frame(mei)
+    mei$first.occ <- c("yes", rep("no", nrow(mei) - 1))
     ## The object args is a list, where each component corresponds to a
     ## model to fit, and it contains the required arguments of fit.popan()
     ## for that model.
@@ -779,6 +809,16 @@ manta.ma.wrap <- function(captlist, mei, chat = 1, n.boots = 100, AIC.cutoff = 1
         message("Fitting models...")
     }
     fits <- par.fit.popan(n.cores, arg.list = args)
+    ## Fitting everything but with a null transience specification.
+    if (include.transience){
+        if (verbose){
+            message("Fitting transience models...")
+        }
+        fits.trans <- par.add.transience(fits, ptr.model = ~ first.occ, ptr.group.pars = TRUE,
+                                         ptr.group.effect = FALSE, n.attempts = n.attempts,
+                                         try.limit = 10, n.cores = n.cores)
+        fits <- append(fits, fits.trans)
+    }
     ## Calculating AICs for all the models.
     fits.AICs <- sapply(fits, AIC, chat = chat)
     ## Keeping only those within the AIC cutoff.
