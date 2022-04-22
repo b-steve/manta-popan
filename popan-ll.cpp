@@ -6,13 +6,6 @@ using namespace Rcpp;
 using namespace std;
 
 // [[Rcpp::export]]
-double hello_world(){
-  double out = 3;
-  cout << "hello world" << endl;
-  return out;
-}
-
-// [[Rcpp::export]]
 double popan_ll(int k, NumericVector phivec, NumericVector pvec, NumericVector ptrvec_full,
 		       NumericVector pentvec, double Ns, double nhist, IntegerVector first_obs,
 		       IntegerVector last_obs, IntegerMatrix det_dat){
