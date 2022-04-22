@@ -1283,6 +1283,33 @@ par.fit.popan <- function(n.cores, ..., arg.list = NULL){
     out
 }
 
+par.add.transience <- function(fits, ptr.model = ~ 1, ptr.group.pars = TRUE, ptr.group.effect = FALSE, retry = FALSE, n.attempts = 1, try.limit = 10, n.cores){
+    n.fits <- length(fits)
+    FUN <- function(i, fits, try.limit){
+        k <- 1
+        fit.fail <- TRUE
+        while (k <= try.limit & fit.fail){
+            out <- try(add.transience(fits[[i]], ptr.model = ptr.model, ptr.group.pars = ptr.group.pars,
+                                      ptr.group.effect = ptr.group.effect, n.attempts = n.attempts,
+                                      n.cores = 1, startvec = "random"),
+                       silent = TRUE)
+            if (class(out) == "popan"){
+                fit.fail <- FALSE
+            } else {
+                k <- k + 1
+            }
+        }
+        out
+    }
+    cluster <- makeCluster(n.cores)
+    clusterEvalQ(cluster, {
+        source("main.r")
+    })
+    out <- parLapplyLB(cluster, 1:n.fits, FUN, fits = fits, try.limit = try.limit)
+    stopCluster(cluster)
+    out
+}
+
 boot.p <- function(x){
     n.boot <- length(x)
     n.zeros <- sum(x == 0)
