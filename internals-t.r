@@ -164,7 +164,6 @@ popanGeneral.covs.fit.func.transience <- function(dat, k=ncol(dat[[1]]), birthfu
     ## Negative log likelihood function:
     ## -----------------------------------------------------------------------------------------------------
     negloglik.func <- function(pars, out = "nll") {
-
         ## pars contains only the parameters for estimation.
         ## Populate the vector of all parameters by mapping pars to allpars as follows:
         allpars <- pars[parInds]
@@ -345,7 +344,6 @@ popanGeneral.covs.fit.func.transience <- function(dat, k=ncol(dat[[1]]), birthfu
                         ## first sighting to the occasion L-1 immediately previous to its last sighting.
                         datvec.hst <- dat.f[hst, f:last.hst]
                         p.hst <- pvec[f:last.hst]
-                        #browser()
                         phi.hst <- phivec[f:(last.hst-1)]
                         ## For residents, joint probability of entry and obtaining all leading zeroes.
 
