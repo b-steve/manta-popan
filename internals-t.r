@@ -168,6 +168,14 @@ popanGeneral.covs.fit.func.transience <- function(dat, k=ncol(dat[[1]]), birthfu
         ## Populate the vector of all parameters by mapping pars to allpars as follows:
         allpars <- pars[parInds]
         names(allpars) <- allparnames
+        if (any(is.nan(pars))){
+            return(NA)
+        }
+        if (printit){
+            for (i in 1:length(pars)){
+                cat(names(pars)[i], ": ", round(pars[i], 3), ", ", sep = "")
+            }
+        }
 
         ## Inner function to find the neg-log-likelihood contribution for a single group.
         onegroup.func <- function(gp, out){
@@ -382,9 +390,6 @@ popanGeneral.covs.fit.func.transience <- function(dat, k=ncol(dat[[1]]), birthfu
         ## Overall negative-log-likelihood is the sum across groups:
         nll <- sum(sapply(1:ngp, onegroup.func, out = out))
         if(printit){
-            #for (i in 1:length(pars)){
-            #    cat(names(pars)[i], ": ", round(pars[i], 3), ", ", sep = "")
-            #}
             cat("NLL:", nll, "\n")
         }
         if (out == "nll"){
