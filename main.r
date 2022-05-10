@@ -483,18 +483,21 @@ boot.ma.popan <- function(fits, n.boots = 10, chat = 1, n.cores = 1, progress.ba
     rhos.weighted <- 0*fits[[1]]$rhos
     ps.weighted <- 0*fits[[1]]$ps
     pents.weighted <- 0*fits[[1]]$pents
+    ptrs.weighted <- 0*fits[[1]]$ptrs
     ENs.weighted <- 0*fits[[1]]$ENs
     for (j in 1:n.fits){
         phis.weighted <- phis.weighted + w[j]*fits[[j]]$phis
         rhos.weighted <- rhos.weighted + w[j]*fits[[j]]$rhos
         ps.weighted <- ps.weighted + w[j]*fits[[j]]$ps
         pents.weighted <- pents.weighted + w[j]*fits[[j]]$pents
+        ptrs.weighted <- ptrs.weighted + w[j]*fits[[j]]$ptrs
         ENs.weighted <- ENs.weighted + w[j]*fits[[j]]$ENs
     }
     out.weighted.ests <- list(phis = phis.weighted,
                               rhos = rhos.weighted,
                               ps = ps.weighted,
                               pents = pents.weighted,
+                              ptrs = ptrs.weighted,
                               ENs = ENs.weighted,
                               ENs.tot = apply(ENs.weighted, 1, sum))
     ## Getting original capture histories.
@@ -532,6 +535,7 @@ boot.ma.popan <- function(fits, n.boots = 10, chat = 1, n.cores = 1, progress.ba
                               rhos = fits.boot[[which.model]]$rhos,
                               ps = fits.boot[[which.model]]$ps,
                               pents = fits.boot[[which.model]]$pents,
+                              ptrs = fits.boot[[which.model]]$ptrs,
                               ENs = fits.boot[[which.model]]$ENs,
                               ENs.tot = apply(fits.boot[[which.model]]$ENs, 1, sum),
                               model.no = which.model)
@@ -543,18 +547,21 @@ boot.ma.popan <- function(fits, n.boots = 10, chat = 1, n.cores = 1, progress.ba
         rhos.weighted.boot <- 0*fits.boot[[1]]$rhos
         ps.weighted.boot <- 0*fits.boot[[1]]$ps
         pents.weighted.boot <- 0*fits.boot[[1]]$pents
+        ptrs.weighted.boot <- 0*fits.boot[[1]]$ptrs
         ENs.weighted.boot <- 0*fits.boot[[1]]$ENs
         for (j in 1:n.fits){
             phis.weighted.boot <- phis.weighted.boot + w[j]*fits.boot[[j]]$phis
             rhos.weighted.boot <- rhos.weighted.boot + w[j]*fits.boot[[j]]$rhos
             ps.weighted.boot <- ps.weighted.boot + w[j]*fits.boot[[j]]$ps
             pents.weighted.boot <- pents.weighted.boot + w[j]*fits.boot[[j]]$pents
+            ptrs.weighted.boot <- ptrs.weighted.boot + w[j]*fits.boot[[j]]$ptrs
             ENs.weighted.boot <- ENs.weighted.boot + w[j]*fits.boot[[j]]$ENs
         }
         out.weighted[[i]] <- list(phis = phis.weighted.boot,
                                   rhos = rhos.weighted.boot,
                                   ps = ps.weighted.boot,
                                   pents = pents.weighted.boot,
+                                  ptrs = ptrs.weighted.boot,
                                   ENs = ENs.weighted.boot,
                                   ENs.tot = apply(ENs.weighted.boot, 1, sum))
         ## Saving all the fits for weighted bootstrap.
