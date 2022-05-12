@@ -19,13 +19,32 @@ misool.gof[[2]]$test3sr
 misool.gof[[1]]$marray
 
 ## Doing everything for the Misool analysis.
-misool.wrap.out <- manta.ma.wrap(misool.captlist, mei = covs$mei, chat = 1,
-                                n.boot = 1000, AIC.cutoff = 10, random.start = TRUE,
-                                n.attempts = 20, n.cores = 3)
+
+misool.wrap.out <- 
+  manta.ma.wrap(misool_captlist, 
+                mei = covs$mei, 
+                chat = 1,
+                n.boot = 1000, 
+                AIC.cutoff = 10, 
+                random.start = TRUE,
+                n.attempts = 20, 
+                n.cores = 8,
+                include.transience = FALSE)
+
+save(misool.wrap.out, file = "output/misool.wrap.out.RData")
+
 ## Need something like this for Dampier, noting we need the chat for Dampier.
-dampier.wrap.out <- manta.ma.wrap(misool.captlist, mei = covs$mei, chat = dampier.chat,
-                                  n.boot = 1000, AIC.cutoff = 10, random.start = TRUE,
-                                  n.attempts = 100, n.cores = 3)
+
+dampier.wrap.out <- 
+  manta.ma.wrap(dampier_captlist,
+                mei = covs$mei,
+                chat = dampier_chat,
+                n.boot = 1000,
+                AIC.cutoff = 10,
+                random.start = TRUE,
+                n.attempts = 100,
+                n.cores = 8,
+                include.transience = TRUE)
 
 ## To see the arguments used for a specific fit you can look at the
 ## args component. In particular, here is the model.list component for
