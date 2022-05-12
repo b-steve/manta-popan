@@ -93,6 +93,7 @@ dampier.wrap.out <-
 
 save(dampier.wrap.out, file = "output/dampier.wrap.out.RData")
 
+
 ## To see the arguments used for a specific fit you can look at the
 ## args component. In particular, here is the model.list component for
 ## one of them.
