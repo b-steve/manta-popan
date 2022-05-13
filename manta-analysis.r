@@ -1,31 +1,98 @@
 ## Sourcing model fitting functions.
 source("main.r")
-## Reading in data.
-load("misool.dampier.caphist.RData")
 
-## Need to create an overall goodness of fit function, to do something like this:
-misool.gof <- popan.gof(misool.captlist)
-dampier.gof <- popan.gof(dampier.captlist)
+## Reading in data.
+load("misool_dampier_caphist.RData")
+
+# Goodness of fit (GOF) tests ---------------------------------------------
+
+misool_gof <- 
+  popan.gof(misool_captlist)
+
+dampier_gof <- 
+  popan.gof(dampier_captlist)
+
 ## Getting the overall c-hat for Dampier and Misool
-dampier.chat <- dampier.gof$combined$chat
-misool.chat <- misool.gof$combined$chat
-## You can inspect different tests like this. The tests are called
-## "test2cl", "test2ct", "test3sr", and "test3sm".
-## TEST2CL for group 1.
-misool.gof[[1]]$test2cl
-## TEST3SR for group 2.
-misool.gof[[2]]$test3sr
-## You can get M-arrays for each group like this:
-misool.gof[[1]]$marray
+
+misool_chat <- 
+  misool_gof$combined$chat
+
+dampier_chat <- 
+  dampier_gof$combined$chat
+
+
+## OVERALL TEST for group 1 in MISOOL
+misool_gof[[1]]$overall
+
+## OVERALL TEST for group 2 in MISOOL
+misool_gof[[2]]$overall
+
+## OVERALL TEST for group 1 in DAMPIER
+dampier_gof[[1]]$overall
+
+## OVERALL TEST for group 2 in DAMPIER
+dampier_gof[[2]]$overall
+
+## follow up test following the significant results in overall test
+## TEST2CT for group 1 (FEMALES)
+dampier_gof[[1]]$test2ct
+
+## TEST3SR for group 1
+dampier_gof[[1]]$test3sr
+
+## TEST3SM for group 1
+dampier_gof[[1]]$test3sm
+
+## TEST2CL for group 1
+dampier_gof[[1]]$test2cl
+
+## M-arrays for each group
+dampier_gof[[1]]$marray
+
+## TEST2CT for group 2 (MALES)
+dampier_gof[[2]]$test2ct
+
+## TEST3SR for group 2
+dampier_gof[[2]]$test3sr
+
+## TEST3SM for group 2
+dampier_gof[[2]]$test3sm
+
+## TEST2CL for group 2
+dampier_gof[[2]]$test2cl
+
+# MAIN ANALYSES -----------------------------------------------------------
 
 ## Doing everything for the Misool analysis.
-misool.wrap.out <- manta.ma.wrap(misool.captlist, mei = covs$mei, chat = 1,
-                                n.boot = 1000, AIC.cutoff = 10, random.start = TRUE,
-                                n.attempts = 20, n.cores = 3)
+
+misool.wrap.out <- 
+  manta.ma.wrap(misool_captlist, 
+                mei = covs$mei, 
+                chat = 1,
+                n.boot = 1000, 
+                AIC.cutoff = 10, 
+                random.start = TRUE,
+                n.attempts = 20, 
+                n.cores = 8,
+                include.transience = FALSE)
+
+save(misool.wrap.out, file = "output/misool.wrap.out.RData")
+
 ## Need something like this for Dampier, noting we need the chat for Dampier.
-dampier.wrap.out <- manta.ma.wrap(misool.captlist, mei = covs$mei, chat = dampier.chat,
-                                  n.boot = 1000, AIC.cutoff = 10, random.start = TRUE,
-                                  n.attempts = 100, n.cores = 3)
+
+dampier.wrap.out <- 
+  manta.ma.wrap(dampier_captlist,
+                mei = covs$mei,
+                chat = dampier_chat,
+                n.boot = 1000,
+                AIC.cutoff = 10,
+                random.start = TRUE,
+                n.attempts = 100,
+                n.cores = 8,
+                include.transience = TRUE)
+
+save(dampier.wrap.out, file = "output/dampier.wrap.out.RData")
+
 
 ## To see the arguments used for a specific fit you can look at the
 ## args component. In particular, here is the model.list component for
