@@ -179,11 +179,11 @@ is a resident with probability $(1 - \gamma_1)$, so we also have
 For our standard model, we specified the expected population size on
 occasion $t + 1$ in terms of the expected population size on occasion
 $t$ in Equation \eqref{eq:e1}. We can now achieve something similar
-here. For the second occasion, we have $\E{N_2} = (\phi_1 + \psi_1)
-\E{R_1}$ from \eqref{eq:entp1}, and substituting in \eqref{eq:er1}
-gives
+here. For the second occasion, we have
+$\E{N_2} = (\phi_1 + \psi_1) \E{R_1}$ from \eqref{eq:entp1}, and
+substituting in \eqref{eq:er1} gives
 \begin{equation}
-  \E{N_2}  = (\phi_1 + \psi_1) (1 - \gamma_1) \E{N_1}.
+  \E{N_2}  = (\phi_1 + \psi_1) (1 - \gamma_1) \E{N_1}. \label{eq:EN2t}
 \end{equation}
 
 For subsequent occasions ($t = 2, \ldots$), we have $\E{N_{t + 1}} =
@@ -191,8 +191,44 @@ For subsequent occasions ($t = 2, \ldots$), we have $\E{N_{t + 1}} =
 \eqref{eq:ert2} gives
 \begin{equation}
   \E{N_{t + 1}} = \frac{(\phi_t + \psi_t) \{ \phi_{t - 1} + (1 - \gamma_t) \psi_{t - 1}\}
-    \E{N_t}}{\phi_{t - 1} + \psi_{t - 1}}.
+    \E{N_t}}{\phi_{t - 1} + \psi_{t - 1}}. \label{eq:entp1n1}
 \end{equation}
+
+Similarly to Equation \eqref{eq:e2} for standard models, we can also express $E(N_{t + 1})$ in terms of the superpopulationsize and probabilities of entry, where
+\begin{align}
+  \E{N_{t + 1}} &= \phi_t \E{R_t} + p_{e, t + 1}M \\
+                &= \frac{\phi_t \{ \phi_{t - 1} + (1 - \gamma_t) \psi_{t - 1}\}
+                  \E{N_t}}{\phi_{t - 1} + \psi_{t - 1}} + p_{e, t + 1}M. \label{eq:entp1n2}
+\end{align}
+
+We can equate \eqref{eq:entp1n1} and \eqref{eq:entp1n2} to develop an
+expression for the probabilities of entries as follows:
+\begin{align}
+  \frac{(\phi_t + \psi_t) \{ \phi_{t - 1} + (1 - \gamma_t) \psi_{t - 1}\}
+    \E{N_t}}{\phi_{t - 1} + \psi_{t - 1}} &= \frac{\phi_t \{ \phi_{t - 1} + (1 - \gamma_t) \psi_{t - 1}\}
+                                            \E{N_t}}{\phi_{t - 1} + \psi_{t - 1}} + p_{e, t + 1}M \\
+  p_{e, t + 1} &= \frac{\psi_t \{ \phi_{t - 1} + (1 - \gamma_t)\psi_{t - 1} \} \E{N_t}}{M(\phi_{t - 1} + \psi_{t - 1})}. \label{eq:petp1t}
+\end{align}
+This expression applies to $p_{e, t + 1}$ for $t = 2, 3, \cdots$.  For
+$t = 1$, corresponding to $p_{e, 2}$, we can equate \eqref{eq:EN2t}
+with
+$\E{N_2} = \phi_1\E{R_1} + p_{e, 2} M = \phi_1 (1 - \gamma_1) \E{N_1}
++ p_{e, 2}M$ to give
+\begin{align}
+  (\phi_1 + \psi_1) (1 - \gamma_1) \E{N_1} &= \phi_1 (1 - \gamma_1) \E{N_1}
+                                             + p_{e, 2}M \\
+  p_{e, 2} &= \frac{\psi_1 (1 - \gamma_1) \E{N_1}}{M}, \label{eq:pe2t}
+\end{align}
+As with the standard models, we can (1) initialise $p_{e, 1}$ at any
+value, (2) calculate $\E{N_1} = p_{e, 1} M$, (3) calculate $p_{e, 2}$
+from \eqref{eq:pe2t}, (4) iteratively calculate the remaining
+$\E{N_t}$ and $p_{e, t}$ terms using \eqref{eq:entp1n2} and
+\eqref{eq:petp1t}, and (5) rescale the probabilities of entry
+calculated from the preceding steps so that they sum to one.
+
+We can then calculate the standard POPAN model likelihood using these
+probabilities of entry.
+
 
 \bibliographystyle{apalike} \bibliography{refs}
 
