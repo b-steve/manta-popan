@@ -26,14 +26,14 @@ k)$ indicates the individual was detected on occasion $t$ of a total
 of $k$ occasions, and $\omega_t = 0$ indicates the individual was not
 detected.
 
-Our model parameters are
+Our model has the following parameters:
 \begin{itemize}
   \item $p_t$, detection probability. This parameter is the
     probability of an individual being detected on occasion $t$.
   \item $\phi_t$, survival probability. This parameter is the
-    probability than an individual alive and in the population on
-    occasion $t$ is still alive and in the population on occasion $t +
-    1$.
+    probability of an individual that is alive and in the population
+    on occasion $t$ still being alive and in the population on
+    occasion $t + 1$.
   \item $\psi_t$, per-capita recruitment rate. This is the expected
     number of individuals who enter the population on occasion $t +
     1$ per individual in the population on occasion $t$.
@@ -86,7 +86,7 @@ then we could determine the remaining $p_e$ values by iteratively
 applying Equations \eqref{eq:petp1} and \eqref{eq:e2}: we calculate
 $\E{N_1} = p_{e, 1} M$, then $p_{e, 2}$ from $\E{N_1}$ using
 \eqref{eq:petp1}, then $\E{N_2}$ from $p_{e, 2}$ using \eqref{eq:e2},
-and so on. In practice, however we don't know the correct value at
+and so on. In practice, however, we don't know the correct value at
 which to initialise $p_{e, 1}$, but we can leverage the fact that the
 $p_e$ parameters must sum to one. We provisionally initialise at any
 value (e.g., $p_{e, 1} = 1$), calculate the $p_e$ parameters using
@@ -119,13 +119,13 @@ transient that was detected on the sole occasion they were in the
 population, although they may still be a resident that evaded
 detection on the other occasions they were in the population, and
 indeed some residents are only in the population for a single
-occasion: for any given resident recruited on time $t$, there is a $(1
-- \phi_t)$ probability that they fail to survive beyond this single
-occasion. We can still use the standard POPAN likelihood as long
-as we can calculate the new entry probability parameters, $p_{e}$, for
-our new model.
+occasion: for any given resident recruited on time $t$, there is a
+$(1 - \phi_t)$ probability that they fail to survive beyond this
+single occasion. We can still use the standard POPAN likelihood as
+long as we can calculate the entry probability parameters, $p_{e}$,
+for our new model.
 
-Let $T_t$ and $R_t$ be the number of transients and transients,
+Let $T_t$ and $R_t$ be the number of transients and residents,
 respectively, in the population on occasion $t$, so that $N_t = T_t +
 R_t$. Similarly to the standard model described in the previous
 section, we link recruitment on occasion $t + 1$ to the number of
@@ -194,7 +194,9 @@ For subsequent occasions ($t = 2, \ldots$), we have $\E{N_{t + 1}} =
     \E{N_t}}{\phi_{t - 1} + \psi_{t - 1}}. \label{eq:entp1n1}
 \end{equation}
 
-Similarly to Equation \eqref{eq:e2} for standard models, we can also express $E(N_{t + 1})$ in terms of the superpopulationsize and probabilities of entry, where
+Similarly to Equation \eqref{eq:e2} for standard models, we can also
+express $E(N_{t + 1})$ in terms of the superpopulation size and
+probabilities of entry, where
 \begin{align}
   \E{N_{t + 1}} &= \phi_t \E{R_t} + p_{e, t + 1}M \\
                 &= \frac{\phi_t \{ \phi_{t - 1} + (1 - \gamma_t) \psi_{t - 1}\}
@@ -219,13 +221,19 @@ $\E{N_2} = \phi_1\E{R_1} + p_{e, 2} M = \phi_1 (1 - \gamma_1) \E{N_1}
                                              + p_{e, 2}M \\
   p_{e, 2} &= \frac{\psi_1 (1 - \gamma_1) \E{N_1}}{M}, \label{eq:pe2t}
 \end{align}
-As with the standard models, we can (1) initialise $p_{e, 1}$ at any
-value, (2) calculate $\E{N_1} = p_{e, 1} M$, (3) calculate $p_{e, 2}$
-from \eqref{eq:pe2t}, (4) iteratively calculate the remaining
+As with the standard models, we can
+\begin{enumerate}
+\item initialise $p_{e, 1}$ at any
+  value,
+\item calculate $\E{N_1} = p_{e, 1} M$,
+\item calculate $p_{e, 2}$
+  from \eqref{eq:pe2t},
+\item iteratively calculate the remaining
 $\E{N_t}$ and $p_{e, t}$ terms using \eqref{eq:entp1n2} and
-\eqref{eq:petp1t}, and (5) rescale the probabilities of entry
-calculated from the preceding steps so that they sum to one.
-
+\eqref{eq:petp1t}, and
+\item rescale the probabilities of entry
+  calculated from the preceding steps so that they sum to one.
+\end{enumerate}
 We can then calculate the standard POPAN model likelihood using these
 probabilities of entry.
 
