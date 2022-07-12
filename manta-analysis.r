@@ -101,7 +101,7 @@ save(dampier.wrap.out, file = "output/dampier.wrap.out.RData")
 ## Here's how you figure out how sex was included in the model:
 
 ## (1) If group.pars is TRUE then the coefficients for the parameter
-## in model.list are shared ("grouped" across the sexes, otherwise we
+## in model.list are shared ("grouped" across the sexes), otherwise we
 ## separately estimate the effects of the covariates in model.list for
 ## each sex.
 ## (2) If group.effect is TRUE, then we fit a main effect of sex. Note
@@ -119,6 +119,13 @@ save(dampier.wrap.out, file = "output/dampier.wrap.out.RData")
 ##   separately fit the covariates for both sexes, so that the
 ##   relationship one covariate has for females might be quite
 ##   different than the relationship it has with males.
+
+## p ~ mei, group.pars = list(p = TRUE), group.effect = list(p = FALSE)
+## This means p(MEI)
+## p ~ mei, group.pars = list(p = TRUE), group.effect = list(p = TRUE)
+## This means p(MEI + sex)
+## p ~ mei, group.pars = list(p = FALSE), group.effect = list(p = FALSE)
+## This means p(MEI * sex)
 
 ## Here's an example:
 misool.best.fits[[2]]$args$model.list
