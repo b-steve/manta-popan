@@ -703,7 +703,7 @@ summary.ma.popan <- function(fit.ma, method = "best", pars = "ENs", groups = NUL
 ##             are considered, the longer the function will take,
 ##             because all models under consideration are fitted for
 ##             each bootstrap iteration.
-## random.start, n.atempts: Passed to fit.popan().
+## random.start, n.attempts: Passed to fit.popan().
 ## n.cores: The number of cores for parallel computing.
 ## verbose: Logical. If TRUE, progress is printed to the console.
 
