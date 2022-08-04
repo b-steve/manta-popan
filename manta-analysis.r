@@ -85,8 +85,8 @@ save(dampier.wrap.out, file = "output/dampier.wrap.out.RData")
 ##   and females have the same parameter values across all years.
 
 ## - group.pars is TRUE and group.effect is TRUE. This means the
-##   effects of the covariates in model.list are the same for both
-##   sexes, but we additionally estimate a parameter allowing a
+##   effects of the covariates in model.list are the same for both sexes,
+##   but we additionally estimate a parameter allowing a
 ##   constant difference across years (on the link scale) between sexes.
 
 ## - group.pars is FALSE and group.effect is FALSE. This means we
@@ -112,6 +112,7 @@ misool.best.fits[[2]]$args$group.effect
 
 ## plotting Misool data
 popan.plot(misool.ma.fit, year.start = 2009, year.end = 2019)
+
 ## plotting Dampier data
 popan.plot(dampier.ma.fit, year.start = 2009, year.end = 2019)
 ## So we have:
@@ -137,9 +138,11 @@ summary(misool.ma.fit, pars = "phis") # apparent survival rate
 summary(misool.ma.fit, pars = "rhos") # per capita recruitment rate
 summary(misool.ma.fit, pars = "ps") # sighting/detection probability
 summary(misool.ma.fit, pars = "pents") # entry probability
+
 ## You can also just choose a subset of the groups.
 summary(misool.ma.fit, pars = "ENs", groups = 1)
 summary(misool.ma.fit, pars = "ENs", groups = 2)
+
 ## ... Or reorder them in the output for whatever reason.
 summary(misool.ma.fit, pars = "ENs", groups = c(2, 1))
 
