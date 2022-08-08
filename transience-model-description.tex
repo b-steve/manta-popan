@@ -81,20 +81,11 @@ By equating \eqref{eq:e1} and \eqref{eq:e2}, we have
 \end{align}
 
 By definition, the expected number of individuals in the population on
-the first occasion is $\E{N_1} = p_{e, 1} M$. If we knew $p_{e, 1}$,
-then we could determine the remaining $p_e$ values by iteratively
-applying Equations \eqref{eq:petp1} and \eqref{eq:e2}: we calculate
-$\E{N_1} = p_{e, 1} M$, then $p_{e, 2}$ from $\E{N_1}$ using
-\eqref{eq:petp1}, then $\E{N_2}$ from $p_{e, 2}$ using \eqref{eq:e2},
-and so on. In practice, however, we don't know the correct value at
-which to initialise $p_{e, 1}$, but we can leverage the fact that the
-$p_e$ parameters must sum to one. We provisionally initialise at any
-value (e.g., $p_{e, 1} = 1$), calculate the $p_e$ parameters using
-this initialisaion, and finally rescale them to sum to one by
-multiplying them by the same constant.
-
-Once we have computed the $p_e$ parameters, we can use the standard
-POPAN model likelihood [insert reference].
+the first occasion is $\E{N_1} = p_{e, 1} M$. Using the fact that the
+$p_e$ parameters must sum to one, we can calculate the $p_e$
+parameters using \eqref{eq:petp1} and \eqref{eq:e2} iteratively. Once
+we have computed the $p_e$ parameters, we can use the standard POPAN
+model likelihood (Schwarz and Arnason, 1996).
 
 \section{POPAN models with transience}
 
@@ -116,14 +107,14 @@ resident. If we detect an individual on more than one occasion then we
 know they are a resident, but we are unable to resolve the status of
 an individual that was only detected on one occasion: they could be a
 transient that was detected on the sole occasion they were in the
-population, although they may still be a resident that evaded
-detection on the other occasions they were in the population, and
-indeed some residents are only in the population for a single
-occasion: for any given resident recruited on time $t$, there is a
-$(1 - \phi_t)$ probability that they fail to survive beyond this
-single occasion. We can still use the standard POPAN likelihood as
-long as we can calculate the entry probability parameters, $p_{e}$,
-for our new model.
+population, but they could still be a resident that evaded detection
+on the other occasions they were in the population, and indeed some
+residents are only in the population for a single occasion: for any
+given resident recruited on time $t$, there is a $(1 - \phi_t)$
+probability that they fail to survive beyond this single occasion. We
+can still use the standard POPAN likelihood as long as we can
+calculate the entry probability parameters, $p_{e}$, for our new
+model.
 
 Let $T_t$ and $R_t$ be the number of transients and residents,
 respectively, in the population on occasion $t$, so that $N_t = T_t +
@@ -148,12 +139,13 @@ we obtain
   \\ &= \{ \phi_t + (1 - \gamma_{t + 1}) \psi_t\} \E{R_t}. \label{eq:ertp1}
 \end{align}
 
-Similarly, for transients, we have $\E{T_{t + 1} \mid R_t} = \gamma_{t
-  + 1} \psi_t R_t$ and $\E{T_{t + 1}} = \gamma_{t + 1} \psi_t
-\E{R_t}$, where we only have a term for recruited individuals, because
-by definition transients do not survive between occasions. To find the
-expected total population size on occation $t + 1$ we can sum the
-expectations for transients and residents respectively, which gives
+Similarly, for transients, we have
+$\E{T_{t + 1} \mid R_t} = \gamma_{t + 1} \psi_t R_t$ and
+$\E{T_{t + 1}} = \gamma_{t + 1} \psi_t \E{R_t}$, where we only have a
+term for recruited individuals, because by definition transients do
+not survive between occasions. To find the expected total population
+size on occasion $t + 1$ we can sum the expectations for transients
+and residents respectively, which gives
 \begin{align}
   \E{N_{t + 1}} &= \E{T_{t + 1}} + \E{R_{t + 1}} \nonumber \\
   &= (\phi_t + \psi_t) \E{R_t}, \label{eq:entp1} \intertext{and so}
@@ -170,73 +162,37 @@ specify $\E{R_t}$ in terms of $\E{N_t}$:
   \E{R_t} = \frac{\{ \phi_{t - 1} + (1 - \gamma_t) \psi_{t - 1}\}
     \E{N_t}}{\phi_{t - 1} + \psi_{t - 1}}. \label{eq:ert2}
 \end{equation}
-
-By definition, each individual in the population in the first occasion
-is a resident with probability $(1 - \gamma_1)$, so we also have
+This equation applies to the expected number of residents for
+$t = 2, 3, \cdots$. By definition, each individual in the population
+in the first occasion is a resident with probability $(1 - \gamma_1)$,
+so for $t = 1$ we have
 \begin{equation}
 \E{R_1} = (1 - \gamma_1) \E{N_1}. \label{eq:er1}
 \end{equation}
+
 For our standard model, we specified the expected population size on
 occasion $t + 1$ in terms of the expected population size on occasion
 $t$ in Equation \eqref{eq:e1}. We can now achieve something similar
-here. For the second occasion, we have
-$\E{N_2} = (\phi_1 + \psi_1) \E{R_1}$ from \eqref{eq:entp1}, and
-substituting in \eqref{eq:er1} gives
+here. We have $\E{N_{t + 1}} = (\phi_t + \psi_t) \E{R_t}$ from
+\eqref{eq:entp1}, and similarly to Equation \eqref{eq:e2} for standard
+models, we can also express $\E{N_{t + 1}}$ in terms of the
+superpopulation size and probabilities of entry, where
 \begin{equation}
-  \E{N_2}  = (\phi_1 + \psi_1) (1 - \gamma_1) \E{N_1}. \label{eq:EN2t}
+  \E{N_{t + 1}} = \phi_t \E{R_t} + p_{e, t + 1}M.  \label{eq:entp1n2}
 \end{equation}
-
-For subsequent occasions ($t = 2, \ldots$), we have $\E{N_{t + 1}} =
-(\phi_t + \psi_t) \E{R_t}$ from \eqref{eq:entp1}, and substituting in
-\eqref{eq:ert2} gives
-\begin{equation}
-  \E{N_{t + 1}} = \frac{(\phi_t + \psi_t) \{ \phi_{t - 1} + (1 - \gamma_t) \psi_{t - 1}\}
-    \E{N_t}}{\phi_{t - 1} + \psi_{t - 1}}. \label{eq:entp1n1}
-\end{equation}
-
-Similarly to Equation \eqref{eq:e2} for standard models, we can also
-express $E(N_{t + 1})$ in terms of the superpopulation size and
-probabilities of entry, where
-\begin{align}
-  \E{N_{t + 1}} &= \phi_t \E{R_t} + p_{e, t + 1}M \\
-                &= \frac{\phi_t \{ \phi_{t - 1} + (1 - \gamma_t) \psi_{t - 1}\}
-                  \E{N_t}}{\phi_{t - 1} + \psi_{t - 1}} + p_{e, t + 1}M. \label{eq:entp1n2}
-\end{align}
-
-We can equate \eqref{eq:entp1n1} and \eqref{eq:entp1n2} to develop an
+We can equate \eqref{eq:entp1} and \eqref{eq:entp1n2} to develop an
 expression for the probabilities of entries as follows:
 \begin{align}
-  \frac{(\phi_t + \psi_t) \{ \phi_{t - 1} + (1 - \gamma_t) \psi_{t - 1}\}
-    \E{N_t}}{\phi_{t - 1} + \psi_{t - 1}} &= \frac{\phi_t \{ \phi_{t - 1} + (1 - \gamma_t) \psi_{t - 1}\}
-                                            \E{N_t}}{\phi_{t - 1} + \psi_{t - 1}} + p_{e, t + 1}M \\
-  p_{e, t + 1} &= \frac{\psi_t \{ \phi_{t - 1} + (1 - \gamma_t)\psi_{t - 1} \} \E{N_t}}{M(\phi_{t - 1} + \psi_{t - 1})}. \label{eq:petp1t}
+  (\phi_t + \psi_t) \E{R_t} &= \phi_t \E{R_t} + p_{e, t + 1}M \nonumber \\
+  p_{e, t + 1} &= \frac{\psi_t \E{R_t}}{M}, \label{eq:petp1t}
 \end{align}
-This expression applies to $p_{e, t + 1}$ for $t = 2, 3, \cdots$.  For
-$t = 1$, corresponding to $p_{e, 2}$, we can equate \eqref{eq:EN2t}
-with
-$\E{N_2} = \phi_1\E{R_1} + p_{e, 2} M = \phi_1 (1 - \gamma_1) \E{N_1}
-+ p_{e, 2}M$ to give
-\begin{align}
-  (\phi_1 + \psi_1) (1 - \gamma_1) \E{N_1} &= \phi_1 (1 - \gamma_1) \E{N_1}
-                                             + p_{e, 2}M \\
-  p_{e, 2} &= \frac{\psi_1 (1 - \gamma_1) \E{N_1}}{M}, \label{eq:pe2t}
-\end{align}
-As with the standard models, we can
-\begin{enumerate}
-\item initialise $p_{e, 1}$ at any
-  value,
-\item calculate $\E{N_1} = p_{e, 1} M$,
-\item calculate $p_{e, 2}$
-  from \eqref{eq:pe2t},
-\item iteratively calculate the remaining
-$\E{N_t}$ and $p_{e, t}$ terms using \eqref{eq:entp1n2} and
-\eqref{eq:petp1t}, and
-\item rescale the probabilities of entry
-  calculated from the preceding steps so that they sum to one.
-\end{enumerate}
-We can then calculate the standard POPAN model likelihood using these
-probabilities of entry.
+noting that for $p_{e, 2}$, corresponding to $t = 1$, we use
+\eqref{eq:er1} rather than \eqref{eq:ert2} to calculate the expected
+number of residents in the population on the previous occasion.
 
+As with the standard models, we can use the fact that the $p_e$
+parameters must sum to one, and iteratively calculate the $\E{N_t}$
+and $p_{e, t}$ terms using \eqref{eq:entp1n2} and \eqref{eq:petp1t}.
 
 \bibliographystyle{apalike} \bibliography{refs}
 
